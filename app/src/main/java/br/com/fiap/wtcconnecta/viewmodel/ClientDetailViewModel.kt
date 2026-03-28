@@ -1,0 +1,276 @@
+package br.com.fiap.wtcconnecta.viewmodel
+
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import br.com.fiap.wtcconnecta.data.model.Client
+import br.com.fiap.wtcconnecta.data.model.Division
+import br.com.fiap.wtcconnecta.data.model.Group
+import br.com.fiap.wtcconnecta.data.model.Message
+import br.com.fiap.wtcconnecta.data.model.Note
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
+import br.com.fiap.wtcconnecta.data.repository.AuthRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class ClientDetailUiState(
+    val isLoading: Boolean = true,
+    val client: Client? = null,
+    val notes: List<Note> = emptyList(),
+    val messages: List<Message> = emptyList(),
+    val divisions: List<Division> = emptyList(),
+    val groups: List<Group> = emptyList(),
+    val error: String? = null,
+    val senderNames: Map<String, String> = emptyMap()
+)
+
+class ClientDetailViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
+
+    private val slashCommands = mapOf(
+        "/agradecer" to "O WTC Connecta agradece seu contato! Estamos à disposição.",
+        "/promo"     to "Temos uma promoção especial para você! 10% de desconto em todos os serviços esta semana.",
+        "/boleto"    to "Claro! Estou gerando a segunda via do seu boleto e enviarei em instantes."
+    )
+
+    private val _uiState = MutableStateFlow(ClientDetailUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private var currentClientId: String? = null
+
+    private fun buildConversationId(id1: String, id2: String): String =
+        if (id1 < id2) "${id1}_${id2}" else "${id2}_${id1}"
+
+    private fun getOperatorEmail(): String? {
+        val token = RetrofitClient.authToken ?: return null
+        return try {
+            val payload = token.split(".")[1]
+            val decoded = android.util.Base64.decode(
+                payload.padEnd((payload.length + 3) / 4 * 4, '='),
+                android.util.Base64.URL_SAFE
+            )
+            val json = String(decoded)
+            val subRegex = Regex("\"sub\"\\s*:\\s*\"([^\"]+)\"")
+            subRegex.find(json)?.groupValues?.get(1)
+        } catch (e: Exception) {
+            Log.e("ClientDetailVM", "Erro ao decodificar token: ${e.message}")
+            null
+        }
+    }
+
+    fun loadAllDetails(clientId: String) {
+        currentClientId = clientId
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                val operatorEmail = getOperatorEmail()
+
+                // Carrega o cliente primeiro para obter o email
+                val client = safeApiCall { repository.getClientById(clientId) }
+
+                // Monta o conversationId usando emails dos dois lados
+                val clientEmail = client?.email ?: clientId
+                val conversationId = if (operatorEmail != null)
+                    buildConversationId(clientEmail, operatorEmail)
+                else clientId
+
+                val conversationDeferred = async { safeApiCall { repository.getConversation(conversationId) } }
+                val notesDeferred        = async { safeApiCall { repository.getNotesForClient(clientId) } }
+                val divisionsDeferred    = async { safeApiCall { repository.getDivisions() } }
+                val groupsDeferred       = async { safeApiCall { repository.getGroups() } }
+
+                val conversation = conversationDeferred.await() ?: emptyList()
+                val notes        = notesDeferred.await() ?: emptyList()
+                val divisions    = divisionsDeferred.await() ?: emptyList()
+                val groups       = groupsDeferred.await() ?: emptyList()
+
+                if (client == null) {
+                    _uiState.update { it.copy(isLoading = false, error = "Cliente não encontrado.") }
+                    return@launch
+                }
+
+                val newNames = resolveSenderNames(conversation, client)
+
+                _uiState.update {
+                    it.copy(
+                        isLoading   = false,
+                        client      = client,
+                        notes       = notes,
+                        messages    = conversation,
+                        divisions   = divisions,
+                        groups      = groups,
+                        senderNames = it.senderNames + newNames
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("ClientDetailVM", "Erro ao buscar detalhes: ${e.message}", e)
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar detalhes do cliente.") }
+            }
+        }
+    }
+
+    // Polling a cada 5 segundos para atualizar mensagens em tempo real
+    fun startPolling(clientId: String) {
+        viewModelScope.launch {
+            while (true) {
+                delay(5_000)
+                refreshMessages(clientId)
+            }
+        }
+    }
+
+    private suspend fun refreshMessages(clientId: String) {
+        try {
+            val operatorEmail = getOperatorEmail()
+            val client  = _uiState.value.client ?: return
+            val clientEmail = client.email
+            val conversationId = if (operatorEmail != null)
+                buildConversationId(clientEmail, operatorEmail)
+            else clientId
+
+            val updated = safeApiCall { repository.getConversation(conversationId) } ?: return
+
+            // Resolve nomes de novos senderIds que ainda não conhecemos
+            val knownIds    = _uiState.value.senderNames.keys
+            val newSenders  = updated.map { it.senderId }.filter { it !in knownIds }.distinct()
+            val newNames    = mutableMapOf<String, String>()
+            for (senderId in newSenders) {
+                val user = safeApiCall { repository.getUserByEmail(senderId) }
+                if (user != null) newNames[senderId] = user.name
+            }
+            newNames[client.email] = client.name
+
+            _uiState.update {
+                it.copy(
+                    messages    = updated,
+                    senderNames = it.senderNames + newNames
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("ClientDetailVM", "Erro no polling: ${e.message}")
+        }
+    }
+
+    private suspend fun resolveSenderNames(
+        conversation: List<Message>,
+        client: Client
+    ): Map<String, String> {
+        val names = mutableMapOf<String, String>()
+        val senders = conversation.map { it.senderId }.filter { it.isNotBlank() }.distinct()
+        for (senderId in senders) {
+            try {
+                val user = repository.getUserByEmail(senderId)
+                if (user != null) names[senderId] = user.name
+            } catch (e: Exception) {
+                Log.w("ClientDetailVM", "Não encontrou nome para $senderId")
+            }
+        }
+        names[client.email] = client.name
+        return names
+    }
+
+    // ── Perfil do cliente ─────────────────────────────────────────────
+
+    fun updateClientProfile(divisionId: String, groupId: String) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            try {
+                val updated = client.copy(
+                    divisionId = divisionId,
+                    groupId    = groupId,
+                    tags       = client.tags.orEmpty(),
+                    noteIds    = client.noteIds.orEmpty()
+                )
+                repository.updateClient(client.id, updated)
+                _uiState.update { it.copy(client = updated) }
+            } catch (e: Exception) {
+                Log.e("ClientDetailVM", "Erro ao atualizar perfil: ${e.message}")
+                _uiState.update { it.copy(error = "Erro ao atualizar perfil do cliente.") }
+            }
+        }
+    }
+
+    // ── Anotações ────────────────────────────────────────────────────
+
+    fun addNote(text: String, clientId: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val success = repository.createNote(clientId = clientId, text = text)
+                if (success) loadAllDetails(clientId)
+                else _uiState.update { it.copy(error = "Falha ao adicionar anotação.") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Erro ao adicionar anotação.") }
+            }
+        }
+    }
+
+    fun updateNote(note: Note, newText: String, clientId: String) {
+        viewModelScope.launch {
+            val updated = note.copy(text = newText)
+            _uiState.update { state ->
+                state.copy(notes = state.notes.map { if (it.id == note.id) updated else it })
+            }
+        }
+    }
+
+    fun deleteNote(noteId: String, clientId: String) {
+        viewModelScope.launch {
+            _uiState.update { state ->
+                state.copy(notes = state.notes.filter { it.id != noteId })
+            }
+        }
+    }
+
+    // ── Mensagens ─────────────────────────────────────────────────────
+
+    fun sendMessage(text: String, clientId: String, senderId: String) {
+        if (text.isBlank()) return
+        val content = slashCommands[text.trim()] ?: text
+        viewModelScope.launch {
+            try {
+                val success = repository.sendMessage(receiverId = clientId, content = content)
+                if (success) {
+                    val operatorEmail  = getOperatorEmail()
+                    val clientEmail    = _uiState.value.client?.email ?: clientId
+                    val conversationId = if (operatorEmail != null)
+                        buildConversationId(clientEmail, operatorEmail)
+                    else clientId
+                    val updated = safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
+                    _uiState.update { it.copy(messages = updated) }
+                } else {
+                    _uiState.update { it.copy(error = "Falha ao enviar mensagem.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Erro ao enviar mensagem.") }
+            }
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+
+    fun getSenderName(senderId: String): String =
+        _uiState.value.senderNames[senderId] ?: senderId
+
+    fun isFromOperator(senderId: String): Boolean {
+        val operatorEmail = getOperatorEmail()
+        return senderId == operatorEmail
+    }
+
+    fun getCommandSuggestions(query: String): List<String> {
+        if (!query.startsWith("/")) return emptyList()
+        return slashCommands.keys.filter { it.startsWith(query, ignoreCase = true) }
+    }
+
+    fun clearError() { _uiState.update { it.copy(error = null) } }
+
+    private suspend fun <T> safeApiCall(apiCall: suspend () -> T): T? {
+        return try { apiCall() } catch (e: Exception) {
+            Log.e("ClientDetailVM", "safeApiCall erro: ${e.message}")
+            null
+        }
+    }
+}

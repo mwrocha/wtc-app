@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "978442971419",
+    "project_id": "wtcconnecta",
+    "storage_bucket": "wtcconnecta.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:978442971419:android:bda5a8b7aeec0a820a8bbe",
+        "android_client_info": {
+          "package_name": "br.com.fiap.wtcconnecta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1xGr5Q8A9jYNmQNqvACz7YZDIF0Zwyy4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
