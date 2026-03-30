@@ -1,31 +1,28 @@
 package br.com.fiap.wtcconnecta.ui.theme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 
+import androidx.compose.ui.graphics.Color
 
 // Cores principais
-val PrimaryColor = Color(0xFF0B5179)      // Azul-petróleo (barra superior / FAB)
-val SecondaryColor = Color(0xFF0A6A9E)    // Azul médio (links / destaques)
-val AccentColor = Color(0xFF3FA7E3)       // Azul claro (ícones, botões secundários)
+val PrimaryColor   = Color(0xFF0B537B)
+val SecondaryColor = Color(0xFF1A6E9A)
+val AccentColor    = Color(0xFF3FA7E3)
 
-// Containers (usados no Theme)
-val PrimaryContainer = Color(0xFFD6DAE0)  // Azul bem claro (chips, botões leves)
-val SecondaryContainer = Color(0xFFD6E8F2) // Azul acinzentado claro (áreas secundárias)
-val TertiaryContainer = Color(0xFFF0F6FA) // Fundo muito suave (cards selecionados ou blocos neutros)
+// Containers
+val PrimaryContainer   = Color(0xFFEEF6FB)  // azul pálido
+val SecondaryContainer = Color(0xFFD0E8F2)  // azul hint
+val TertiaryContainer  = Color(0xFFF0F8FC)  // fundo suave
 
 // Fundo e superfícies
-val BackgroundColor = Color(0xFFFFFFFF)   // Fundo branco principal
-val SurfaceColor = Color(0xFFF7FAFC)      // Fundo de listas / blocos
-val SurfaceVariant = Color(0xFFE1EBF2)    // Separadores, bordas suaves
-val CardBackground = Color(0xFFF4F6F8)    // Fundo dos cards (cinza muito claro)
+val BackgroundColor = Color(0xFFF5FAFD)
+val SurfaceColor    = Color(0xFFFFFFFF)
+val SurfaceVariant  = Color(0xFFEEF6FB)
+val CardBackground  = Color(0xFFFFFFFF)
 
 // Texto
-val TextPrimary = Color(0xFF0D1B2A)       // Quase preto (títulos)
-val TextSecondary = Color(0xFF3C4A57)     // Cinza-azulado (emails)
-val TextMuted = Color(0xFF7A8A99)         // Cinza claro (placeholders, labels)
+val TextPrimary   = Color(0xFF0D2B3E)
+val TextSecondary = Color(0xFF3C5A6E)
+val TextMuted     = Color(0xFF6E90A0)
 
-
-
-// Cores de estado
-val SuccessColor = Color(0xFF2E7D32)
-val ErrorColor = Color(0xFFC62828)
+// Status
+val SuccessColor = Color(0xFF1A7A5E)
+val ErrorColor   = Color(0xFFC62828)

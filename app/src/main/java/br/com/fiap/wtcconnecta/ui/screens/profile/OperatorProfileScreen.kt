@@ -3,7 +3,6 @@ package br.com.fiap.wtcconnecta.ui.screens.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.fiap.wtcconnecta.ui.components.AvatarPicker
 import br.com.fiap.wtcconnecta.viewmodel.OperatorProfileViewModel
 
 private val WtcBlue     = Color(0xFF0B537B)
@@ -40,13 +41,14 @@ fun OperatorProfileScreen(
     onNavigateBack: () -> Unit,
     viewModel: OperatorProfileViewModel = viewModel()
 ) {
-    val uiState           by viewModel.uiState.collectAsState()
-    var isEditing         by remember { mutableStateOf(false) }
-    var editedName        by remember { mutableStateOf("") }
-    var showSaveDialog    by remember { mutableStateOf(false) }
+    val uiState            by viewModel.uiState.collectAsState()
+    val context            = LocalContext.current
+    var isEditing          by remember { mutableStateOf(false) }
+    var editedName         by remember { mutableStateOf("") }
+    var showSaveDialog     by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
-    var showEmailDialog   by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var showEmailDialog    by remember { mutableStateOf(false) }
+    val snackbarHostState  = remember { SnackbarHostState() }
 
     LaunchedEffect(operatorId) { viewModel.loadProfile(operatorId) }
     LaunchedEffect(uiState.operator) {
@@ -67,6 +69,12 @@ fun OperatorProfileScreen(
             viewModel.clearEmailState(); showEmailDialog = false; onNavigateBack()
         }
     }
+    LaunchedEffect(uiState.avatarError) {
+        uiState.avatarError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearAvatarError()
+        }
+    }
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
@@ -74,12 +82,11 @@ fun OperatorProfileScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // Header gradiente
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+            // ── Header gradiente ──────────────────────────────────────────
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
+                .padding(horizontal = 20.dp, vertical = 20.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -92,10 +99,8 @@ fun OperatorProfileScreen(
                                 tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Meu Perfil", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Meu Perfil", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                    // Ações editar/salvar/cancelar
                     Row {
                         if (isEditing) {
                             IconButton(onClick = { isEditing = false; editedName = uiState.operator?.name ?: "" },
@@ -124,9 +129,10 @@ fun OperatorProfileScreen(
             }
 
             when {
-                uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator(color = WtcBlue)
-                }
+                uiState.isLoading && uiState.operator == null ->
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        CircularProgressIndicator(color = WtcBlue)
+                    }
                 else -> Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -134,18 +140,24 @@ fun OperatorProfileScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Card avatar + nome
+                    // ── Card avatar + nome ────────────────────────────────
                     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(2.dp)) {
                         Column(modifier = Modifier.padding(24.dp).fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(modifier = Modifier.size(80.dp).clip(CircleShape)
-                                .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                                Text(uiState.operator?.name?.firstOrNull()?.uppercase() ?: "?",
-                                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = WtcBlue)
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
+
+                            AvatarPicker(
+                                avatarUrl      = uiState.avatarUrl,
+                                displayName    = uiState.operator?.name ?: "",
+                                isUploading    = uiState.isUploadingAvatar,
+                                size           = 80,
+                                onPickImage    = { uri -> viewModel.uploadAvatar(uri, context) },
+                                onDeleteAvatar = { viewModel.deleteAvatar() }
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
                             if (isEditing) {
                                 OutlinedTextField(value = editedName, onValueChange = { editedName = it },
                                     label = { Text("Nome") }, singleLine = true,
@@ -170,7 +182,7 @@ fun OperatorProfileScreen(
                         }
                     }
 
-                    // Seção conta
+                    // ── Seção conta ───────────────────────────────────────
                     Text("INFORMAÇÕES DA CONTA", fontSize = 11.sp, fontWeight = FontWeight.Bold,
                         color = TextMuted, letterSpacing = 0.8.sp)
 
@@ -181,8 +193,7 @@ fun OperatorProfileScreen(
                             verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
                                 .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Email, null, tint = WtcBlue,
-                                    modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Email, null, tint = WtcBlue, modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -192,13 +203,12 @@ fun OperatorProfileScreen(
                             }
                             TextButton(onClick = { showEmailDialog = true },
                                 contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                Text("Alterar", fontSize = 13.sp, color = WtcBlue,
-                                    fontWeight = FontWeight.SemiBold)
+                                Text("Alterar", fontSize = 13.sp, color = WtcBlue, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
 
-                    // Seção segurança
+                    // ── Seção segurança ───────────────────────────────────
                     Text("SEGURANÇA", fontSize = 11.sp, fontWeight = FontWeight.Bold,
                         color = TextMuted, letterSpacing = 0.8.sp)
 
@@ -209,13 +219,11 @@ fun OperatorProfileScreen(
                             verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
                                 .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Lock, null, tint = WtcBlue,
-                                    modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Lock, null, tint = WtcBlue, modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Senha", fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                                    color = TextPrimary)
+                                Text("Senha", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                                 Text("Alterar senha da conta", fontSize = 12.sp, color = TextMuted)
                             }
                             IconButton(onClick = { showPasswordDialog = true }) {
@@ -269,13 +277,12 @@ fun OperatorProfileScreen(
 @Composable
 fun PasswordField(
     value: String, onValueChange: (String) -> Unit,
-    label: String, visible: Boolean, onToggleVisibility: () -> Unit,
-    isError: Boolean = false
+    label: String, visible: Boolean, onToggleVisibility: () -> Unit, isError: Boolean = false
 ) {
     OutlinedTextField(
-        value = value, onValueChange = onValueChange,
-        label = { Text(label) }, singleLine = true, isError = isError,
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+        value = value, onValueChange = onValueChange, label = { Text(label) },
+        singleLine = true, isError = isError, modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
@@ -296,10 +303,10 @@ fun ChangeEmailDialog(
     currentEmail: String, isLoading: Boolean, error: String?,
     onDismiss: () -> Unit, onConfirm: (String, String) -> Unit
 ) {
-    var newEmail      by remember { mutableStateOf("") }
-    var confirmEmail  by remember { mutableStateOf("") }
-    var password      by remember { mutableStateOf("") }
-    var showPassword  by remember { mutableStateOf(false) }
+    var newEmail     by remember { mutableStateOf("") }
+    var confirmEmail by remember { mutableStateOf("") }
+    var password     by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
     val emailMismatch  = newEmail.isNotBlank() && confirmEmail.isNotBlank() && newEmail != confirmEmail
     val emailUnchanged = newEmail.isNotBlank() && newEmail == currentEmail
 
@@ -338,8 +345,7 @@ fun ChangeEmailDialog(
                 Surface(color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Warning, null,
-                            tint = MaterialTheme.colorScheme.error,
+                        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(14.dp).padding(top = 1.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Você será desconectado e precisará fazer login com o novo e-mail.",

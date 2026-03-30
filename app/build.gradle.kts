@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services")  // ← adicione aqui
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -62,9 +62,12 @@ dependencies {
     // ViewModel para Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 
-    // Firebase  ← fora do dependencies aninhado, no nível correto
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Coil — carregamento de imagens via URL (necessário para ImageMessageBubble)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

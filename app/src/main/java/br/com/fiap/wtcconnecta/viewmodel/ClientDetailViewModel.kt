@@ -67,11 +67,7 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val operatorEmail = getOperatorEmail()
-
-                // Carrega o cliente primeiro para obter o email
                 val client = safeApiCall { repository.getClientById(clientId) }
-
-                // Monta o conversationId usando emails dos dois lados
                 val clientEmail = client?.email ?: clientId
                 val conversationId = if (operatorEmail != null)
                     buildConversationId(clientEmail, operatorEmail)
@@ -86,6 +82,12 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                 val notes        = notesDeferred.await() ?: emptyList()
                 val divisions    = divisionsDeferred.await() ?: emptyList()
                 val groups       = groupsDeferred.await() ?: emptyList()
+
+                // DEBUG TEMPORÁRIO
+                Log.d("MSG_DEBUG", "Total mensagens: ${conversation.size}")
+                conversation.take(3).forEach { msg ->
+                    Log.d("MSG_DEBUG", "id=${msg.id} body=${msg.body} contentRaw=${msg.contentRaw} display=${msg.displayContent}")
+                }
 
                 if (client == null) {
                     _uiState.update { it.copy(isLoading = false, error = "Cliente não encontrado.") }
@@ -112,7 +114,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    // Polling a cada 5 segundos para atualizar mensagens em tempo real
     fun startPolling(clientId: String) {
         viewModelScope.launch {
             while (true) {
@@ -126,39 +127,28 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         try {
             val operatorEmail = getOperatorEmail()
             val client  = _uiState.value.client ?: return
-            val clientEmail = client.email
             val conversationId = if (operatorEmail != null)
-                buildConversationId(clientEmail, operatorEmail)
+                buildConversationId(client.email, operatorEmail)
             else clientId
 
             val updated = safeApiCall { repository.getConversation(conversationId) } ?: return
-
-            // Resolve nomes de novos senderIds que ainda não conhecemos
-            val knownIds    = _uiState.value.senderNames.keys
-            val newSenders  = updated.map { it.senderId }.filter { it !in knownIds }.distinct()
-            val newNames    = mutableMapOf<String, String>()
+            val knownIds   = _uiState.value.senderNames.keys
+            val newSenders = updated.map { it.senderId }.filter { it !in knownIds }.distinct()
+            val newNames   = mutableMapOf<String, String>()
             for (senderId in newSenders) {
                 val user = safeApiCall { repository.getUserByEmail(senderId) }
                 if (user != null) newNames[senderId] = user.name
             }
             newNames[client.email] = client.name
 
-            _uiState.update {
-                it.copy(
-                    messages    = updated,
-                    senderNames = it.senderNames + newNames
-                )
-            }
+            _uiState.update { it.copy(messages = updated, senderNames = it.senderNames + newNames) }
         } catch (e: Exception) {
             Log.e("ClientDetailVM", "Erro no polling: ${e.message}")
         }
     }
 
-    private suspend fun resolveSenderNames(
-        conversation: List<Message>,
-        client: Client
-    ): Map<String, String> {
-        val names = mutableMapOf<String, String>()
+    private suspend fun resolveSenderNames(conversation: List<Message>, client: Client): Map<String, String> {
+        val names   = mutableMapOf<String, String>()
         val senders = conversation.map { it.senderId }.filter { it.isNotBlank() }.distinct()
         for (senderId in senders) {
             try {
@@ -172,28 +162,19 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         return names
     }
 
-    // ── Perfil do cliente ─────────────────────────────────────────────
-
     fun updateClientProfile(divisionId: String, groupId: String) {
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             try {
-                val updated = client.copy(
-                    divisionId = divisionId,
-                    groupId    = groupId,
-                    tags       = client.tags.orEmpty(),
-                    noteIds    = client.noteIds.orEmpty()
-                )
+                val updated = client.copy(divisionId = divisionId, groupId = groupId,
+                    tags = client.tags.orEmpty(), noteIds = client.noteIds.orEmpty())
                 repository.updateClient(client.id, updated)
                 _uiState.update { it.copy(client = updated) }
             } catch (e: Exception) {
-                Log.e("ClientDetailVM", "Erro ao atualizar perfil: ${e.message}")
                 _uiState.update { it.copy(error = "Erro ao atualizar perfil do cliente.") }
             }
         }
     }
-
-    // ── Anotações ────────────────────────────────────────────────────
 
     fun addNote(text: String, clientId: String) {
         if (text.isBlank()) return
@@ -225,8 +206,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    // ── Mensagens ─────────────────────────────────────────────────────
-
     fun sendMessage(text: String, clientId: String, senderId: String) {
         if (text.isBlank()) return
         val content = slashCommands[text.trim()] ?: text
@@ -250,15 +229,11 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────
-
     fun getSenderName(senderId: String): String =
         _uiState.value.senderNames[senderId] ?: senderId
 
-    fun isFromOperator(senderId: String): Boolean {
-        val operatorEmail = getOperatorEmail()
-        return senderId == operatorEmail
-    }
+    fun isFromOperator(senderId: String): Boolean =
+        senderId == getOperatorEmail()
 
     fun getCommandSuggestions(query: String): List<String> {
         if (!query.startsWith("/")) return emptyList()

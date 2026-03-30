@@ -29,6 +29,14 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
         val type           = remoteMessage.data["type"]           ?: "DIRECT"
         val conversationId = remoteMessage.data["conversationId"] ?: ""
         val groupId        = remoteMessage.data["groupId"]        ?: ""
+        val senderId       = remoteMessage.data["senderId"]       ?: ""
+
+        // Ignorar notificação se o remetente for o próprio usuário logado
+        val loggedUserEmail = getEmailFromToken(RetrofitClient.authToken)
+        if (senderId.isNotBlank() && loggedUserEmail != null && senderId == loggedUserEmail) {
+            Log.d("FCM", "Push ignorado — remetente é o próprio usuário logado")
+            return
+        }
 
         // GROUP_REQUEST — solicitação de troca de grupo (operador)
         if (type == "GROUP_REQUEST") {

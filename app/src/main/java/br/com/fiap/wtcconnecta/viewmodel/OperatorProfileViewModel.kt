@@ -1,14 +1,19 @@
 package br.com.fiap.wtcconnecta.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.data.remote.UserPublicDto
 import br.com.fiap.wtcconnecta.data.repository.AuthRepository
-import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 data class OperatorProfileUiState(
     val operator: UserPublicDto? = null,
@@ -18,7 +23,11 @@ data class OperatorProfileUiState(
     val passwordSuccess: Boolean = false,
     val passwordError: String? = null,
     val emailSuccess: Boolean = false,
-    val emailError: String? = null
+    val emailError: String? = null,
+    // ── Avatar ────────────────────────────────────────────────────────
+    val avatarUrl: String? = null,
+    val isUploadingAvatar: Boolean = false,
+    val avatarError: String? = null
 )
 
 class OperatorProfileViewModel(
@@ -32,19 +41,76 @@ class OperatorProfileViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // Busca email do token e carrega o perfil
                 val email = getEmailFromToken() ?: return@launch
                 val user  = repository.getUserByEmail(email)
                 _uiState.update { it.copy(operator = user, isLoading = false) }
+                // Carrega avatar após perfil
+                loadAvatar()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar perfil.") }
             }
         }
     }
 
+    private fun loadAvatar() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getMyAvatar()
+                if (response.isSuccessful) {
+                    val url = response.body()?.get("url") as? String
+                    if (!url.isNullOrBlank()) {
+                        _uiState.update { it.copy(avatarUrl = url) }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun uploadAvatar(uri: Uri, context: Context) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAvatar = true, avatarError = null) }
+            try {
+                val contentResolver = context.contentResolver
+                val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
+                val inputStream = contentResolver.openInputStream(uri)
+                    ?: throw Exception("Não foi possível abrir o arquivo.")
+                val bytes = inputStream.readBytes()
+                inputStream.close()
+
+                val extension = when (mimeType) {
+                    "image/png"  -> "png"
+                    "image/gif"  -> "gif"
+                    "image/webp" -> "webp"
+                    else         -> "jpg"
+                }
+
+                val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                val part = MultipartBody.Part.createFormData(
+                    "file", "avatar.$extension", requestBody
+                )
+
+                val response = RetrofitClient.instance.uploadAvatar(part)
+                if (response.isSuccessful) {
+                    val url = response.body()?.get("url") as? String
+                    _uiState.update {
+                        it.copy(isUploadingAvatar = false, avatarUrl = url)
+                    }
+                } else {
+                    val msg = when (response.code()) {
+                        400  -> "Tipo ou tamanho inválido (máx 5MB, JPEG/PNG/GIF/WEBP)."
+                        else -> "Erro ao enviar avatar (${response.code()})."
+                    }
+                    _uiState.update { it.copy(isUploadingAvatar = false, avatarError = msg) }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isUploadingAvatar = false, avatarError = "Erro: ${e.message}")
+                }
+            }
+        }
+    }
+
     fun updateName(name: String) {
-        // Para o operador, só atualiza o nome localmente por ora
-        // (pode ser expandido para um endpoint PUT /api/users/{id})
         _uiState.update { state ->
             state.copy(
                 operator = state.operator?.copy(name = name),
@@ -74,6 +140,24 @@ class OperatorProfileViewModel(
         }
     }
 
+    fun changeEmail(newEmail: String, password: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, emailError = null, emailSuccess = false) }
+            try {
+                repository.changeEmail(newEmail, password)
+                    .onSuccess {
+                        repository.logout()
+                        _uiState.update { it.copy(isLoading = false, emailSuccess = true) }
+                    }
+                    .onFailure { e ->
+                        _uiState.update { it.copy(isLoading = false, emailError = e.message ?: "Erro ao alterar e-mail.") }
+                    }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, emailError = "Erro ao alterar e-mail.") }
+            }
+        }
+    }
+
     private fun getEmailFromToken(): String? {
         val token = RetrofitClient.authToken ?: return null
         return try {
@@ -89,27 +173,27 @@ class OperatorProfileViewModel(
         } catch (e: Exception) { null }
     }
 
-    fun clearSuccess()       { _uiState.update { it.copy(success = false) } }
-    fun clearError()         { _uiState.update { it.copy(error = null) } }
-    fun changeEmail(newEmail: String, password: String) {
+    fun deleteAvatar() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, emailError = null, emailSuccess = false) }
+            _uiState.update { it.copy(isUploadingAvatar = true, avatarError = null) }
             try {
-                repository.changeEmail(newEmail, password)
-                    .onSuccess {
-                        // Logout automático — JWT inválido após troca de email
-                        repository.logout()
-                        _uiState.update { it.copy(isLoading = false, emailSuccess = true) }
-                    }
-                    .onFailure { e ->
-                        _uiState.update { it.copy(isLoading = false, emailError = e.message ?: "Erro ao alterar e-mail.") }
-                    }
+                val response = RetrofitClient.instance.deleteAvatar()
+                if (response.isSuccessful) {
+                    _uiState.update { it.copy(isUploadingAvatar = false, avatarUrl = null) }
+                } else {
+                    _uiState.update { it.copy(isUploadingAvatar = false,
+                        avatarError = "Erro ao excluir foto.") }
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, emailError = "Erro ao alterar e-mail.") }
+                _uiState.update { it.copy(isUploadingAvatar = false,
+                    avatarError = "Erro ao excluir foto.") }
             }
         }
     }
 
+    fun clearAvatarError()   { _uiState.update { it.copy(avatarError = null) } }
+    fun clearSuccess()       { _uiState.update { it.copy(success = false) } }
+    fun clearError()         { _uiState.update { it.copy(error = null) } }
     fun clearPasswordState() { _uiState.update { it.copy(passwordSuccess = false, passwordError = null) } }
     fun clearEmailState()    { _uiState.update { it.copy(emailSuccess = false, emailError = null) } }
 }

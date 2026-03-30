@@ -11,6 +11,7 @@ import br.com.fiap.wtcconnecta.data.model.Task
 import br.com.fiap.wtcconnecta.data.model.TaskRequest
 import br.com.fiap.wtcconnecta.data.model.GroupChangeRequestItem
 import br.com.fiap.wtcconnecta.ui.screens.operator.AuditLogItem
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -23,6 +24,18 @@ data class MessageRequest(val recipientId: String, val title: String? = null, va
 data class UnreadCountResponse(val count: Int)
 data class GroupMessageRequest(val groupId: String, val title: String? = null, val body: String)
 data class UserPublicDto(val id: String, val name: String, val email: String, val role: String)
+
+// ── Upload de Imagem ──────────────────────────────────────────────────────────
+data class UploadResponse(
+    val objectKey: String,
+    val url: String,
+    val contentType: String,
+    val size: Long
+)
+
+data class PresignedUrlResponse(
+    val url: String
+)
 
 interface ApiService {
 
@@ -156,18 +169,18 @@ interface ApiService {
     @DELETE("api/tasks/{taskId}")
     suspend fun deleteTask(@Path("taskId") taskId: String): Response<Unit>
 
-    // ── Mensagens — editar/excluir ───────────────────────────────────────────
+    // ── Mensagens — editar/excluir ────────────────────────────────────────────
     @PUT("api/messages/{id}")
     suspend fun editMessage(@Path("id") id: String, @Body body: Map<String, String>): Response<Message>
 
     @DELETE("api/messages/{id}")
     suspend fun deleteMessage(@Path("id") id: String): Response<Unit>
 
-    // ── Solicitação de troca de grupo ────────────────────────────────────────
+    // ── Solicitação de troca de grupo ─────────────────────────────────────────
     @POST("api/group-change-requests")
     suspend fun requestGroupChange(@Body body: Map<String, String>): Response<Unit>
 
-    // ── Solicitações de troca de grupo (operador) ────────────────────────────
+    // ── Solicitações de troca de grupo (operador) ─────────────────────────────
     @GET("api/group-change-requests")
     suspend fun getGroupChangeRequests(): List<GroupChangeRequestItem>
 
@@ -180,4 +193,33 @@ interface ApiService {
     // ── Auditoria ─────────────────────────────────────────────────────────────
     @GET("api/audit")
     suspend fun getAuditLogs(): List<AuditLogItem>
+
+    // ── Upload de Imagem (Cloudflare R2) ──────────────────────────────────────
+    @Multipart
+    @POST("api/upload/image")
+    suspend fun uploadImage(
+        @Part file: MultipartBody.Part
+    ): Response<UploadResponse>
+
+    @GET("api/upload/presigned")
+    suspend fun getPresignedUrl(
+        @Query("key") objectKey: String
+    ): Response<PresignedUrlResponse>
+
+    @Multipart
+    @POST("api/users/avatar")
+    suspend fun uploadAvatar(
+        @Part file: MultipartBody.Part
+    ): Response<Map<String, String>>
+
+    @GET("api/users/avatar")
+    suspend fun getMyAvatar(): Response<Map<String, String>>
+
+    @DELETE("api/users/avatar")
+    suspend fun deleteAvatar(): Response<Map<String, String>>
+
+    @PATCH("api/messages/conversation/{conversationId}/read")
+    suspend fun markConversationAsRead(
+        @Path("conversationId") conversationId: String
+    ): Response<Unit>
 }

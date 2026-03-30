@@ -39,7 +39,7 @@ private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
 private val ColorApproved = Color(0xFF1A7A5E)
 private val ColorRejected = Color(0xFFC62828)
-private val ColorPending  = Color(0xFFE65100)
+private val ColorPending  = Color(0x5BF10000)
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 

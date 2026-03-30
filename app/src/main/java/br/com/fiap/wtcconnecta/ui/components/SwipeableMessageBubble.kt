@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -28,14 +29,22 @@ import br.com.fiap.wtcconnecta.data.model.Message
 import br.com.fiap.wtcconnecta.data.model.TaskRequest
 import kotlin.math.abs
 
-// ── Modelo de tarefa local (sem backend) ──────────────────────────────────────
+private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBluePale = Color(0xFFEEF6FB)
+private val WtcBlueHint = Color(0xFFD0E8F2)
+private val TextPrimary = Color(0xFF0D2B3E)
+private val TextMuted   = Color(0xFF6E90A0)
+
+// ── Modelo de tarefa local ────────────────────────────────────────────────────
+
 data class MessageTask(
     val messageId: String,
     val text: String,
     val createdAt: String? = null
 )
 
-// ── Estado global de mensagens importantes e tarefas locais ───────────────────
+// ── Estado global ─────────────────────────────────────────────────────────────
+
 object MessageActionsState {
     val importantMessages = mutableStateListOf<String>()
     val tasks             = mutableStateListOf<MessageTask>()
@@ -46,9 +55,8 @@ object MessageActionsState {
     }
 
     fun addTask(message: Message) {
-        if (tasks.none { it.messageId == message.id }) {
+        if (tasks.none { it.messageId == message.id })
             tasks.add(MessageTask(message.id, message.content, message.createdAt))
-        }
     }
 
     fun isImportant(messageId: String) = importantMessages.contains(messageId)
@@ -69,17 +77,15 @@ fun SwipeableMessageBubble(
     onDelete: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var showMenu by remember { mutableStateOf(false) }
+    val context     = LocalContext.current
+    var offsetX     by remember { mutableFloatStateOf(0f) }
+    var showMenu    by remember { mutableStateOf(false) }
     var showTaskForm by remember { mutableStateOf(false) }
     val isImportant = MessageActionsState.isImportant(message.id)
 
     val animatedOffset by animateFloatAsState(targetValue = offsetX, label = "swipe_offset")
-
     val bgColor by animateColorAsState(
-        targetValue = if (abs(offsetX) > 60) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        else Color.Transparent,
+        targetValue = if (abs(offsetX) > 60) WtcBluePale else Color.Transparent,
         label = "swipe_bg"
     )
 
@@ -90,10 +96,7 @@ fun SwipeableMessageBubble(
             .background(bgColor)
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (abs(offsetX) > 60) showMenu = true
-                        offsetX = 0f
-                    },
+                    onDragEnd    = { if (abs(offsetX) > 60) showMenu = true; offsetX = 0f },
                     onDragCancel = { offsetX = 0f },
                     onHorizontalDrag = { _, dragAmount ->
                         offsetX = (offsetX + dragAmount).coerceIn(-120f, 120f)
@@ -109,14 +112,9 @@ fun SwipeableMessageBubble(
                     .align(Alignment.Center),
                 contentAlignment = if (animatedOffset > 0) Alignment.CenterStart else Alignment.CenterEnd
             ) {
-                Icon(
-                    imageVector = Icons.Default.SwipeRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(
-                        alpha = (abs(animatedOffset) / 120f).coerceIn(0f, 1f)
-                    ),
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(Icons.Default.SwipeRight, contentDescription = null,
+                    tint = WtcBlue.copy(alpha = (abs(animatedOffset) / 120f).coerceIn(0f, 1f)),
+                    modifier = Modifier.size(24.dp))
             }
         }
 
@@ -127,15 +125,13 @@ fun SwipeableMessageBubble(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isImportant && !isFromCurrentUser) {
-                    Icon(Icons.Default.Star, contentDescription = "Importante",
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(16.dp).padding(end = 4.dp))
+                    Icon(Icons.Default.Star, contentDescription = null,
+                        tint = Color(0xFFE8B84B), modifier = Modifier.size(14.dp).padding(end = 4.dp))
                 }
                 content()
                 if (isImportant && isFromCurrentUser) {
-                    Icon(Icons.Default.Star, contentDescription = "Importante",
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(16.dp).padding(start = 4.dp))
+                    Icon(Icons.Default.Star, contentDescription = null,
+                        tint = Color(0xFFE8B84B), modifier = Modifier.size(14.dp).padding(start = 4.dp))
                 }
             }
         }
@@ -149,28 +145,14 @@ fun SwipeableMessageBubble(
             showEdit     = onEdit != null,
             showDelete   = onDelete != null,
             onDismiss    = { showMenu = false },
-            onImportant  = {
-                MessageActionsState.toggleImportant(message.id)
-                showMenu = false
-            },
-            onCreateTask = {
-                showMenu = false
+            onImportant  = { MessageActionsState.toggleImportant(message.id); showMenu = false },
+            onCreateTask = { showMenu = false
                 if (onCreateTask != null) showTaskForm = true
-                else MessageActionsState.addTask(message)
-            },
-            onEdit = {
-                onEdit?.invoke()
-                showMenu = false
-            },
-            onDelete = {
-                onDelete?.invoke()
-                showMenu = false
-            },
-            onReply = {
-                onReply(message)
-                showMenu = false
-            },
-            onCopy = {
+                else MessageActionsState.addTask(message) },
+            onEdit   = { onEdit?.invoke(); showMenu = false },
+            onDelete = { onDelete?.invoke(); showMenu = false },
+            onReply  = { onReply(message); showMenu = false },
+            onCopy   = {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("mensagem", message.content))
                 showMenu = false
@@ -178,17 +160,13 @@ fun SwipeableMessageBubble(
         )
     }
 
-    // Formulário completo de tarefa — só aparece quando operador passa onCreateTask
     if (showTaskForm && onCreateTask != null) {
         TaskFormDialog(
             clientId   = clientId,
             clientName = clientName,
             messageRef = message.content,
             onDismiss  = { showTaskForm = false },
-            onConfirm  = { request ->
-                onCreateTask(request)
-                showTaskForm = false
-            }
+            onConfirm  = { request -> onCreateTask(request); showTaskForm = false }
         )
     }
 }
@@ -213,95 +191,82 @@ fun MessageActionsMenu(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Ações da mensagem",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold)
+            Text("Ações da mensagem", fontSize = 15.sp,
+                fontWeight = FontWeight.Bold, color = TextPrimary)
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = message.content,
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Preview da mensagem
+                Surface(color = WtcBluePale, shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(message.content, modifier = Modifier.padding(10.dp),
+                        fontSize = 12.sp, color = TextMuted, maxLines = 3)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Destacar
                 MessageActionItem(
                     icon  = if (isImportant) Icons.Default.Star else Icons.Default.StarBorder,
                     label = if (isImportant) "Remover destaque" else "Marcar como importante",
-                    color = MaterialTheme.colorScheme.tertiary,
+                    accent = Color(0xFFE8B84B),
                     onClick = onImportant
                 )
-                if (showEdit) {
-                    MessageActionItem(
-                        icon  = Icons.Default.Edit,
-                        label = "Editar mensagem",
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = onEdit
-                    )
-                }
-                if (showDelete) {
-                    MessageActionItem(
-                        icon  = Icons.Default.Delete,
-                        label = "Excluir mensagem",
-                        color = MaterialTheme.colorScheme.error,
-                        onClick = onDelete
-                    )
-                }
-                if (showTask) {
-                    MessageActionItem(
-                        icon  = Icons.Default.TaskAlt,
-                        label = "Criar tarefa",
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = onCreateTask
-                    )
-                }
+                // Responder
                 MessageActionItem(
-                    icon  = Icons.Default.Reply,
-                    label = "Responder",
-                    color = MaterialTheme.colorScheme.secondary,
-                    onClick = onReply
+                    icon = Icons.Default.Reply, label = "Responder",
+                    accent = WtcBlue, onClick = onReply
                 )
+                // Copiar
                 MessageActionItem(
-                    icon  = Icons.Default.ContentCopy,
-                    label = "Copiar texto",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = onCopy
+                    icon = Icons.Default.ContentCopy, label = "Copiar texto",
+                    accent = TextMuted, onClick = onCopy
+                )
+                // Criar tarefa
+                if (showTask) MessageActionItem(
+                    icon = Icons.Default.TaskAlt, label = "Criar tarefa",
+                    accent = Color(0xFF1A7A5E), onClick = onCreateTask
+                )
+                // Editar
+                if (showEdit) MessageActionItem(
+                    icon = Icons.Default.Edit, label = "Editar mensagem",
+                    accent = WtcBlue, onClick = onEdit
+                )
+                // Excluir
+                if (showDelete) MessageActionItem(
+                    icon = Icons.Default.Delete, label = "Excluir mensagem",
+                    accent = Color(0xFFC62828), onClick = onDelete
                 )
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
 
 @Composable
 fun MessageActionItem(
-    icon: ImageVector,
-    label: String,
-    color: Color,
-    onClick: () -> Unit
+    icon: ImageVector, label: String, accent: Color, onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
-        color = color.copy(alpha = 0.1f),
+        color = accent.copy(alpha = 0.08f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                .background(accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null,
+                    tint = accent, modifier = Modifier.size(17.dp))
+            }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = color, fontWeight = FontWeight.Medium)
+            Text(label, fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -313,56 +278,73 @@ fun MessageActionItem(
 fun TasksBottomSheet(onDismiss: () -> Unit) {
     val tasks = MessageActionsState.tasks
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = Color.White,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
-            Text("Tarefas criadas",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Tarefas criadas", fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold, color = TextPrimary)
+                Surface(color = WtcBluePale, shape = RoundedCornerShape(20.dp)) {
+                    Text("${tasks.size}", fontSize = 11.sp, color = WtcBlue,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                }
+            }
 
             if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Nenhuma tarefa criada ainda.\nDeslize uma mensagem para criar.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(modifier = Modifier.size(56.dp).clip(CircleShape)
+                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.TaskAlt, null,
+                                tint = WtcBlue, modifier = Modifier.size(26.dp))
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("Nenhuma tarefa criada ainda.", fontSize = 14.sp,
+                            color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                        Text("Deslize uma mensagem para criar.", fontSize = 12.sp,
+                            color = TextMuted, modifier = Modifier.padding(top = 4.dp),
+                            textAlign = TextAlign.Center)
+                    }
                 }
             } else {
                 tasks.forEach { task ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TaskAlt, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                        elevation = CardDefaults.cardElevation(0.dp)) {
+                        Row(modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(9.dp))
+                                .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.TaskAlt, null,
+                                    tint = WtcBlue, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(task.text, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                                Text(task.text, fontSize = 13.sp, color = TextPrimary,
+                                    maxLines = 2, fontWeight = FontWeight.Medium)
                                 task.createdAt?.let {
                                     Text(it.take(16).replace("T", " às "),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        fontSize = 10.sp)
+                                        fontSize = 10.sp, color = TextMuted,
+                                        modifier = Modifier.padding(top = 2.dp))
                                 }
                             }
-                            IconButton(
-                                onClick = { MessageActionsState.tasks.remove(task) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = "Remover",
-                                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+                            IconButton(onClick = { MessageActionsState.tasks.remove(task) },
+                                modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Default.Close, null,
+                                    tint = TextMuted, modifier = Modifier.size(15.dp))
                             }
                         }
                     }

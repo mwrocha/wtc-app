@@ -5,7 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.fiap.wtcconnecta.data.model.Client
 import br.com.fiap.wtcconnecta.data.model.Message
+import br.com.fiap.wtcconnecta.data.model.MessageStatus
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.data.repository.AuthRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,14 +34,14 @@ class ChatViewModel(
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState = _uiState.asStateFlow()
 
-    private var currentChatId: String = ""      // conversationId resolvido
+    private var currentChatId: String = ""
     private var currentChatType: String = ""
     private var currentLoggedId: String = ""
-    private var originalChatId: String = ""    // ID original passado pelo NavGraph
+    private var originalChatId: String = ""
 
     fun loadMessages(chatId: String, chatType: String, loggedInUserId: String) {
         currentChatId   = chatId
-        originalChatId  = chatId   // guarda o ID original
+        originalChatId  = chatId
         currentChatType = chatType
         currentLoggedId = loggedInUserId
 
@@ -56,27 +61,20 @@ class ChatViewModel(
             val messages: List<Message> = when (chatType) {
                 "group" -> repository.getConversation(chatId)
                 else    -> {
-                    // Se chatId é um MongoDB ID (sem "@"), resolve o conversationId real
-                    // buscando em getMyConversations e filtrando pela conversa com esse recipientId
                     if (!chatId.contains("@")) {
                         try {
                             val all = repository.getMyConversations()
-                            // Filtra mensagens onde recipientId ou senderId é esse ID
                             val filtered = all.filter {
                                 it.recipientId == chatId || it.senderId == chatId ||
                                         it.conversationId?.contains(chatId) == true
                             }
-                            // Se achou, atualiza o currentChatId para o conversationId correto
                             if (filtered.isNotEmpty()) {
                                 val realConversationId = filtered.first().conversationId
-                                if (realConversationId != null) {
-                                    currentChatId = realConversationId
-                                }
+                                if (realConversationId != null) currentChatId = realConversationId
                             }
                             filtered
                         } catch (e: Exception) { emptyList() }
                     } else {
-                        // chatId já é um conversationId (email_email) — busca direto
                         val byConversation = try {
                             repository.getConversation(chatId)
                         } catch (e: Exception) { emptyList() }
@@ -93,7 +91,6 @@ class ChatViewModel(
                 }
             }
 
-            // Resolve nomes dos remetentes
             val knownIds = _uiState.value.senderNames.keys
             val unknownSenders = messages
                 .map { it.senderId }
@@ -133,7 +130,6 @@ class ChatViewModel(
         }
     }
 
-    // Polling a cada 5s
     fun startPolling() {
         viewModelScope.launch {
             while (true) {
@@ -149,13 +145,26 @@ class ChatViewModel(
         }
     }
 
+    // ── Marcar conversa como lida ao abrir o chat ─────────────────────────────
+    fun markConversationAsRead(conversationId: String) {
+        if (conversationId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                RetrofitClient.instance.markConversationAsRead(conversationId)
+                Log.d("ChatViewModel", "Conversa marcada como lida: $conversationId")
+            } catch (e: Exception) {
+                Log.w("ChatViewModel", "Erro ao marcar como lida: ${e.message}")
+            }
+        }
+    }
+
     fun editMessage(messageId: String, newContent: String) {
         viewModelScope.launch {
             repository.editMessage(messageId, newContent)
                 .onSuccess {
                     _uiState.update { state ->
                         state.copy(messages = state.messages.map { msg ->
-                            if (msg.id == messageId) msg.copy(content = newContent, edited = true)
+                            if (msg.id == messageId) msg.copy(contentRaw = newContent, edited = true)
                             else msg
                         })
                     }
@@ -188,46 +197,71 @@ class ChatViewModel(
     fun sendMessage(text: String, chatId: String, chatType: String, senderId: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
+
+            // 1. Adiciona mensagem otimista com status SENDING
+            val tempId = "temp_${System.currentTimeMillis()}"
+            val tempMessage = Message(
+                id             = tempId,
+                body           = text,
+                senderId       = senderId,
+                conversationId = currentChatId.ifBlank { chatId },
+                createdAt      = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date()),
+                statusRaw      = MessageStatus.SENDING.name
+            )
+            _uiState.update { state ->
+                state.copy(messages = state.messages + tempMessage)
+            }
+
             try {
                 val success = if (chatType == "group") {
                     repository.sendGroupMessage(chatId, text)
                 } else {
-                    // Para 1on1: usa o originalChatId (pode ser MongoDB ID do destinatário)
-                    // ou extrai o email do destinatário a partir do conversationId
                     val receiverId = resolveReceiverId(senderId)
                     repository.sendMessage(receiverId = receiverId, content = text)
                 }
+
                 if (success) {
+                    // 2. Sucesso: remove a mensagem temporária e recarrega do servidor
                     val idToFetch = if (currentChatId.isNotBlank()) currentChatId else chatId
+                    _uiState.update { state ->
+                        state.copy(messages = state.messages.filter { it.id != tempId })
+                    }
                     fetchMessages(idToFetch, chatType, senderId)
                 } else {
+                    // 3. Falha: atualiza status para FAILED
+                    _uiState.update { state ->
+                        state.copy(messages = state.messages.map { msg ->
+                            if (msg.id == tempId) msg.copy(statusRaw = MessageStatus.FAILED.name)
+                            else msg
+                        })
+                    }
                     _uiState.update { it.copy(error = "Falha ao enviar mensagem.") }
                 }
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Erro ao enviar: ${e.message}")
+                // Falha: atualiza status para FAILED
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.map { msg ->
+                        if (msg.id == tempId) msg.copy(statusRaw = MessageStatus.FAILED.name)
+                        else msg
+                    })
+                }
                 _uiState.update { it.copy(error = "Erro ao enviar mensagem.") }
             }
         }
     }
 
-    // Resolve o recipientId correto para envio de mensagem
-    // Se o conversationId é "emailA_emailB", retorna o email do outro participante
     private fun resolveReceiverId(senderEmail: String): String {
         val convId = currentChatId
-        // Se o chatId original não tem "@", é um MongoDB ID — usa diretamente
         if (!originalChatId.contains("@")) return originalChatId
-        // Se o conversationId tem o formato "email_email", extrai o email do outro
         if (convId.contains("@") && convId.contains("_")) {
             val parts = convId.split("_")
-            // Reconstrói emails (podem conter "_" no domínio, mas emails geralmente não)
-            // Tenta encontrar o email que não é o sender
             val emailA = parts.take(parts.size / 2 + 1).joinToString("_")
             val emailB = parts.drop(parts.size / 2 + 1).joinToString("_")
             return when {
                 emailA == senderEmail -> emailB
                 emailB == senderEmail -> emailA
                 else -> {
-                    // Abordagem mais robusta: divide no "_" entre os dois emails
                     val atPositions = convId.indices.filter { convId[it] == '@' }
                     if (atPositions.size >= 2) {
                         val splitPoint = convId.indexOf("_", atPositions[0])
