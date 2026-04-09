@@ -22,8 +22,8 @@ data class ConversationListUiState(
     val groups: List<Group> = emptyList(),
     val lastMessages: Map<String, Message> = emptyMap(),
     val lastMessageIds: Map<String, String> = emptyMap(),
-    // mapa chatId → conversationId real (ex: "69bbaf..." → "bilopes@_maykeop@")
     val conversationIds: Map<String, String> = emptyMap(),
+    val operatorEmail: String? = null, // ← email do operador para iniciar conversa 1:1
     val error: String? = null
 )
 
@@ -102,7 +102,23 @@ class ConversationListViewModel(
                 val conv1on1 = directMessages.filter {
                     it.conversationId == real1on1ConversationId
                 }
+                // Tenta descobrir email do operador a partir do histórico
+                val operatorEmail = conv1on1.firstOrNull { it.senderId != loggedEmail }?.senderId
+                if (operatorEmail != null) {
+                    _uiState.update { it.copy(operatorEmail = operatorEmail) }
+                }
                 checkNewMessages(conv1on1, real1on1ConversationId, "Atendimento WTC", loggedEmail)
+            } else {
+                // Sem histórico 1:1 — tenta descobrir operador pelo grupo
+                val groupMessages = _uiState.value.groups.flatMap { group ->
+                    try { repository.getConversation(group.id) } catch (e: Exception) { emptyList() }
+                }
+                val operatorEmail = groupMessages
+                    .firstOrNull { it.senderId != loggedEmail && it.senderId.contains("@") }
+                    ?.senderId
+                if (operatorEmail != null) {
+                    _uiState.update { it.copy(operatorEmail = operatorEmail) }
+                }
             }
 
             // Grupos
@@ -123,6 +139,9 @@ class ConversationListViewModel(
     fun getConversationId(clientId: String): String {
         return _uiState.value.conversationIds[clientId] ?: clientId
     }
+
+    // Retorna o email do operador para iniciar conversa 1:1 mesmo sem histórico
+    fun getOperatorEmail(): String? = _uiState.value.operatorEmail
 
     private fun getLoggedEmail(): String? {
         val token = RetrofitClient.authToken ?: return null

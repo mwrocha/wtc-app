@@ -26,9 +26,12 @@ import br.com.fiap.wtcconnecta.ui.screens.operator.ClientDetailScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.HomeOperatorScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.OperatorDashboardScreen
 import br.com.fiap.wtcconnecta.ui.screens.profile.ProfileScreen
+import br.com.fiap.wtcconnecta.ui.screens.operator.AttendanceQueueScreen
+import br.com.fiap.wtcconnecta.viewmodel.AttendanceQueueViewModel
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.LoginResult
 import br.com.fiap.wtcconnecta.viewmodel.MainViewModel
+import br.com.fiap.wtcconnecta.data.repository.AuthRepository
 
 sealed class Routes(val route: String) {
     object Login : Routes("login")
@@ -41,6 +44,7 @@ sealed class Routes(val route: String) {
     object GroupManagement : Routes("group_management")
     object Audit : Routes("audit")
     object GroupRequests : Routes("group_requests")
+    object AttendanceQueue : Routes("attendance_queue")
     object OperatorProfile : Routes("operator_profile/{operatorId}") {
         fun createRoute(operatorId: String) = "operator_profile/$operatorId"
     }
@@ -105,7 +109,15 @@ fun NavGraph(
                     onNavigateToKanban = { navController.navigate(Routes.Kanban.route) },
                     onNavigateToGroupManagement = { navController.navigate(Routes.GroupManagement.route) },
                     onNavigateToAudit = { navController.navigate(Routes.Audit.route) },
-                    onNavigateToGroupRequests = { navController.navigate(Routes.GroupRequests.route) }
+                    onNavigateToGroupRequests = { navController.navigate(Routes.GroupRequests.route) },
+                    onNavigateToAttendanceQueue = { navController.navigate(Routes.AttendanceQueue.route) },
+                    onLogout = {
+                        mainViewModel.logout()
+                        AuthRepository().logout()
+                        navController.navigate(Routes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }
@@ -145,12 +157,19 @@ fun NavGraph(
             if (clientId != null) {
                 HomeClientScreen(
                     clientId     = clientId,
-                    clientName   = session?.name ?: "",   // ← passa o nome da sessão
+                    clientName   = session?.name ?: "",
                     onNavigateToConversationList = {
                         navController.navigate(Routes.ConversationList.createRoute(clientId))
                     },
                     onNavigateToProfile   = { navController.navigate(Routes.Profile.createRoute(clientId)) },
-                    onNavigateToCampaigns = { navController.navigate(Routes.CampaignExpress.route) }
+                    onNavigateToCampaigns = { navController.navigate(Routes.CampaignExpress.route) },
+                    onLogout = {
+                        mainViewModel.logout()
+                        AuthRepository().logout()
+                        navController.navigate(Routes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
         }
@@ -232,6 +251,19 @@ fun NavGraph(
                 clientId         = clientId,
                 onProfileUpdated = { navController.popBackStack() },
                 onNavigateBack   = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.AttendanceQueue.route) {
+            val session = userSession
+            AttendanceQueueScreen(
+                onBack = { navController.popBackStack() },
+                onAssumeAndNavigate = { clientId, _ ->
+                    // Navega direto para o ClientDetailScreen do cliente
+                    navController.navigate(Routes.ClientDetail.createRoute(clientId)) {
+                        popUpTo(Routes.AttendanceQueue.route) { inclusive = true }
+                    }
+                }
             )
         }
     }

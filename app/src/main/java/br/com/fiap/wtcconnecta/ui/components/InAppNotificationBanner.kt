@@ -20,15 +20,46 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.service.InAppNotificationState
+import br.com.fiap.wtcconnecta.ui.navigation.Routes
+import kotlinx.coroutines.launch
+
+// ── Helpers JWT ───────────────────────────────────────────────────────────────
+private fun getRoleFromToken(token: String?): String? {
+    if (token == null) return null
+    return try {
+        val payload = token.split(".")[1]
+        val decoded = android.util.Base64.decode(
+            payload.padEnd((payload.length + 3) / 4 * 4, '='),
+            android.util.Base64.URL_SAFE
+        )
+        val json = String(decoded)
+        Regex("\"role\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
+    } catch (e: Exception) { null }
+}
+
+private fun getEmailFromToken(token: String?): String? {
+    if (token == null) return null
+    return try {
+        val payload = token.split(".")[1]
+        val decoded = android.util.Base64.decode(
+            payload.padEnd((payload.length + 3) / 4 * 4, '='),
+            android.util.Base64.URL_SAFE
+        )
+        val json = String(decoded)
+        Regex("\"sub\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
+    } catch (e: Exception) { null }
+}
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
-private val WtcBluePale = Color(0xFFEEF6FB)
 
 @Composable
 fun InAppNotificationBanner(navController: NavController? = null) {
-    val notification by InAppNotificationState.notification.collectAsState()
-    val isLoggedIn = RetrofitClient.authToken != null
+    val notification  by InAppNotificationState.notification.collectAsState()
+    val isLoggedIn    = RetrofitClient.authToken != null
+    val isOperator    = getRoleFromToken(RetrofitClient.authToken) == "OPERATOR"
+    val operatorEmail = getEmailFromToken(RetrofitClient.authToken)
+    val scope         = rememberCoroutineScope()
 
     AnimatedVisibility(
         visible = notification != null && isLoggedIn,
@@ -37,12 +68,11 @@ fun InAppNotificationBanner(navController: NavController? = null) {
     ) {
         notification?.let { notif ->
 
-            // Ícone e cor accent por tipo — mantendo identidade visual
             val (icon, accentColor) = when (notif.type) {
-                "CAMPAIGN"      -> Icons.Default.Campaign  to Color(0xFF1A7A5E)  // verde
-                "GROUP"         -> Icons.Default.Group     to WtcBlueSoft        // azul médio
-                "GROUP_REQUEST" -> Icons.Default.GroupAdd  to Color(0xFFE65100)  // laranja
-                else            -> Icons.Default.Chat      to WtcBlue            // azul principal
+                "CAMPAIGN"      -> Icons.Default.Campaign  to Color(0xFF1A7A5E)
+                "GROUP"         -> Icons.Default.Group     to WtcBlueSoft
+                "GROUP_REQUEST" -> Icons.Default.GroupAdd  to Color(0xFFE65100)
+                else            -> Icons.Default.Chat      to WtcBlue
             }
 
             Box(
@@ -52,17 +82,62 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color.White)
                     .clickable {
-                        if (notif.chatId.isNotBlank() && navController != null) {
-                            if (notif.chatType == "group_request")
-                                navController.navigate("group_requests")
-                            else navController.navigate(
-                                "chat/${notif.chatId}/${notif.chatName}/${notif.chatType}"
-                            )
+                        if (navController != null) {
+                            when {
+                                notif.chatType == "group_request" ->
+                                    navController.navigate("group_requests")
+
+                                // Operador com push DIRECT:
+                                // verifica se já assumiu → vai ao ClientDetail
+                                // ou ainda não assumiu → vai à fila
+                                isOperator && notif.type == "DIRECT" -> {
+                                    scope.launch {
+                                        try {
+                                            val conversationId = notif.chatId
+                                            val status = RetrofitClient.instance
+                                                .getConversationStatus(conversationId)
+
+                                            if (status.status == "IN_PROGRESS" &&
+                                                status.assignedOperatorEmail == operatorEmail) {
+                                                // Já assumiu → extrai email do cliente
+                                                // e busca o clientId para navegar
+                                                val mid = conversationId.indexOf(
+                                                    "_", conversationId.indexOf("@")
+                                                )
+                                                val emailA = conversationId.substring(0, mid)
+                                                val emailB = conversationId.substring(mid + 1)
+                                                val clientEmail = if (emailA != operatorEmail)
+                                                    emailA else emailB
+
+                                                val clients = RetrofitClient.instance.getClients()
+                                                val client  = clients.find { it.email == clientEmail }
+                                                if (client != null) {
+                                                    navController.navigate(
+                                                        Routes.ClientDetail.createRoute(client.id)
+                                                    )
+                                                } else {
+                                                    navController.navigate(Routes.AttendanceQueue.route)
+                                                }
+                                            } else {
+                                                // Ainda não assumiu → vai para a fila
+                                                navController.navigate(Routes.AttendanceQueue.route)
+                                            }
+                                        } catch (e: Exception) {
+                                            navController.navigate(Routes.AttendanceQueue.route)
+                                        }
+                                    }
+                                }
+
+                                // Cliente, grupo, campanha → navega normalmente
+                                notif.chatId.isNotBlank() ->
+                                    navController.navigate(
+                                        "chat/${notif.chatId}/${notif.chatName}/${notif.chatType}"
+                                    )
+                            }
                         }
                         InAppNotificationState.dismiss()
                     }
             ) {
-                // Barra colorida no topo
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp)
@@ -98,15 +173,21 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(top = 2.dp))
                         }
-                        Text("Toque para abrir", fontSize = 10.sp,
-                            color = accentColor, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(top = 3.dp))
+                        Text(
+                            if (isOperator && notif.type == "DIRECT") "Toque para abrir o chat"
+                            else "Toque para abrir",
+                            fontSize = 10.sp, color = accentColor,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(top = 3.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    IconButton(onClick = { InAppNotificationState.dismiss() },
-                        modifier = Modifier.size(28.dp)) {
+                    IconButton(
+                        onClick = { InAppNotificationState.dismiss() },
+                        modifier = Modifier.size(28.dp)
+                    ) {
                         Icon(Icons.Default.Close, contentDescription = "Fechar",
                             tint = Color(0xFF6E90A0), modifier = Modifier.size(16.dp))
                     }

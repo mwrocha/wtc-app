@@ -109,9 +109,15 @@ fun ConversationListScreen(
 
                     item {
                         val realConversationId = viewModel.getConversationId(clientId)
+                        val operatorEmail      = viewModel.getOperatorEmail()
+                        // Se não tem histórico, usa o email do operador diretamente
+                        val chatId = if (realConversationId.contains("@")) realConversationId
+                        else operatorEmail ?: realConversationId
                         val lastMsg = uiState.lastMessages[realConversationId]
                             ?: uiState.lastMessages[clientId]
-                        val lastMessageText = lastMsg?.content ?: "Clique para ver seu chat privado..."
+                        val lastMessageText = lastMsg?.content
+                            ?: if (operatorEmail != null) "Toque para iniciar uma conversa..."
+                            else "Clique para ver seu chat privado..."
 
                         AnimatedVisibility(visible = true) {
                             ConversationCard(
@@ -121,7 +127,7 @@ fun ConversationListScreen(
                                 accent      = WtcBlue,
                                 bgAccent    = WtcBluePale,
                                 onClick     = {
-                                    onNavigateToChat(realConversationId, "Atendimento WTC", "1on1")
+                                    onNavigateToChat(chatId, "Atendimento WTC", "1on1")
                                 }
                             )
                         }

@@ -61,7 +61,10 @@ class ChatViewModel(
             val messages: List<Message> = when (chatType) {
                 "group" -> repository.getConversation(chatId)
                 else    -> {
-                    if (!chatId.contains("@")) {
+                    // ← CORREÇÃO 1: email direto do operador sem histórico ainda
+                    if (chatId.contains("@") && !chatId.contains("_")) {
+                        emptyList()
+                    } else if (!chatId.contains("@")) {
                         try {
                             val all = repository.getMyConversations()
                             val filtered = all.filter {
@@ -239,7 +242,6 @@ class ChatViewModel(
                 }
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Erro ao enviar: ${e.message}")
-                // Falha: atualiza status para FAILED
                 _uiState.update { state ->
                     state.copy(messages = state.messages.map { msg ->
                         if (msg.id == tempId) msg.copy(statusRaw = MessageStatus.FAILED.name)
@@ -253,23 +255,29 @@ class ChatViewModel(
 
     private fun resolveReceiverId(senderEmail: String): String {
         val convId = currentChatId
+
+        // ← CORREÇÃO 2: email direto do operador, usa ele como destinatário
+        if (originalChatId.contains("@") && !originalChatId.contains("_")) {
+            return originalChatId
+        }
+
         if (!originalChatId.contains("@")) return originalChatId
+
         if (convId.contains("@") && convId.contains("_")) {
+            val atPositions = convId.indices.filter { convId[it] == '@' }
+            if (atPositions.size >= 2) {
+                val splitPoint = convId.indexOf("_", atPositions[0])
+                val emailFirst  = convId.substring(0, splitPoint)
+                val emailSecond = convId.substring(splitPoint + 1)
+                return if (emailFirst == senderEmail) emailSecond else emailFirst
+            }
             val parts = convId.split("_")
             val emailA = parts.take(parts.size / 2 + 1).joinToString("_")
             val emailB = parts.drop(parts.size / 2 + 1).joinToString("_")
             return when {
                 emailA == senderEmail -> emailB
                 emailB == senderEmail -> emailA
-                else -> {
-                    val atPositions = convId.indices.filter { convId[it] == '@' }
-                    if (atPositions.size >= 2) {
-                        val splitPoint = convId.indexOf("_", atPositions[0])
-                        val emailFirst  = convId.substring(0, splitPoint)
-                        val emailSecond = convId.substring(splitPoint + 1)
-                        if (emailFirst == senderEmail) emailSecond else emailFirst
-                    } else originalChatId
-                }
+                else -> originalChatId
             }
         }
         return originalChatId

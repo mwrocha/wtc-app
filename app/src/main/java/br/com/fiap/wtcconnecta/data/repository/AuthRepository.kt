@@ -189,6 +189,9 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
     // ── Campanhas ─────────────────────────────────────────────────────────────
 
     suspend fun getCampaigns(): List<Campaign> = apiService.getCampaigns()
+
+    suspend fun getCampaignsForClient(clientId: String): List<Message> =
+        apiService.getCampaignsForClient(clientId)
     suspend fun updateCampaign(id: String, request: CampaignRequest): Campaign = apiService.updateCampaign(id, request)
     suspend fun createCampaign(request: CampaignRequest): Campaign = apiService.createCampaign(request)
     suspend fun dispatchCampaign(id: String): Campaign = apiService.dispatchCampaign(id)

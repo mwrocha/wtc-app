@@ -8,6 +8,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,9 +36,11 @@ fun HomeClientScreen(
     clientName: String = "",
     onNavigateToConversationList: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToCampaigns: () -> Unit = {}
+    onNavigateToCampaigns: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val firstName = clientName.split(" ").firstOrNull() ?: ""
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -74,7 +80,7 @@ fun HomeClientScreen(
 
                     Spacer(modifier = Modifier.width(14.dp))
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             if (firstName.isNotBlank()) "Olá, $firstName 👋" else "Olá! 👋",
                             fontSize = 20.sp,
@@ -86,6 +92,17 @@ fun HomeClientScreen(
                             fontSize = 13.sp,
                             color = Color.White.copy(alpha = 0.72f)
                         )
+                    }
+
+                    // Botão logout
+                    IconButton(
+                        onClick = { showLogoutDialog = true },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Logout, contentDescription = "Sair",
+                            tint = Color.White, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -134,6 +151,31 @@ fun HomeClientScreen(
                 )
             }
         }
+    }
+
+    // ── Dialog de confirmação de logout ───────────────────────────────────────
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text("Sair da conta", fontWeight = FontWeight.Bold, color = Color(0xFF0D2B3E))
+            },
+            text = {
+                Text("Tem certeza que deseja sair?", color = Color(0xFF6E90A0))
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showLogoutDialog = false; onLogout() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B537B)),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Sair", fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar", color = Color(0xFF6E90A0))
+                }
+            }
+        )
     }
 }
 

@@ -103,10 +103,10 @@ fun ChatScreen(
                 .padding(innerPadding)
         ) {
             when {
-                uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                uiState.isLoading -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
-                uiState.messages.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                uiState.messages.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Chat, contentDescription = null,
                             tint = WtcBlueHint, modifier = Modifier.size(56.dp))

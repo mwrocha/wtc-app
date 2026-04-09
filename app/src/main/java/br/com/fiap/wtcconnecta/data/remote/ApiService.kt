@@ -37,6 +37,36 @@ data class PresignedUrlResponse(
     val url: String
 )
 
+// ── Fila de Atendimento ───────────────────────────────────────────────────────
+data class PendingConversation(
+    val conversationId: String,
+    val clientEmail: String,
+    val clientName: String,
+    val clientId: String = "",  // ← para navegação direta ao ClientDetailScreen
+    val lastMessagePreview: String,
+    val status: String,
+    val createdAt: String,
+    val updatedAt: String
+)
+
+data class PendingCountResponse(
+    val count: Long
+)
+
+data class AssumeResponse(
+    val message: String,
+    val conversationId: String,
+    val assignedOperator: String,
+    val status: String
+)
+
+data class ConversationStatusResponse(
+    val conversationId: String,
+    val status: String,
+    val assignedOperatorEmail: String,
+    val assumedAt: String
+)
+
 interface ApiService {
 
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -73,6 +103,12 @@ interface ApiService {
     @POST("api/clients/{id}/notes")
     suspend fun createNote(@Path("id") clientId: String, @Body note: NoteRequest): Response<Note>
 
+    @PUT("api/notes/{id}")
+    suspend fun updateNote(@Path("id") noteId: String, @Body body: Map<String, String>): Response<Note>
+
+    @DELETE("api/notes/{id}")
+    suspend fun deleteNote(@Path("id") noteId: String): Response<Void>
+
     // ── Campaigns (operador) ──────────────────────────────────────────────────
     @GET("api/campaigns")
     suspend fun getCampaigns(): List<Campaign>
@@ -89,6 +125,9 @@ interface ApiService {
     // ── Campaigns Express (cliente) ───────────────────────────────────────────
     @GET("api/campaigns-received")
     suspend fun getMyCampaigns(): List<Message>
+
+    @GET("api/campaigns-received/{clientId}")
+    suspend fun getCampaignsForClient(@Path("clientId") clientId: String): List<Message>
 
     // ── Messages ──────────────────────────────────────────────────────────────
     @POST("api/messages/direct")
@@ -109,6 +148,11 @@ interface ApiService {
     @GET("api/messages/my-conversations")
     suspend fun getMyConversations(): List<Message>
 
+    @PATCH("api/messages/conversation/{conversationId}/read")
+    suspend fun markConversationAsRead(
+        @Path("conversationId") conversationId: String
+    ): Response<Unit>
+
     // ── Users ─────────────────────────────────────────────────────────────────
     @GET("api/users/by-email/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): UserPublicDto
@@ -121,6 +165,18 @@ interface ApiService {
 
     @POST("api/users/change-email")
     suspend fun changeEmail(@Body body: Map<String, String>): Response<Unit>
+
+    @Multipart
+    @POST("api/users/avatar")
+    suspend fun uploadAvatar(
+        @Part file: MultipartBody.Part
+    ): Response<Map<String, String>>
+
+    @GET("api/users/avatar")
+    suspend fun getMyAvatar(): Response<Map<String, String>>
+
+    @DELETE("api/users/avatar")
+    suspend fun deleteAvatar(): Response<Map<String, String>>
 
     // ── Divisions & Groups ────────────────────────────────────────────────────
     @GET("api/divisions")
@@ -206,20 +262,25 @@ interface ApiService {
         @Query("key") objectKey: String
     ): Response<PresignedUrlResponse>
 
-    @Multipart
-    @POST("api/users/avatar")
-    suspend fun uploadAvatar(
-        @Part file: MultipartBody.Part
-    ): Response<Map<String, String>>
+    // ── Fila de Atendimento ───────────────────────────────────────────────────
+    @GET("api/conversations/pending")
+    suspend fun getPendingConversations(): List<PendingConversation>
 
-    @GET("api/users/avatar")
-    suspend fun getMyAvatar(): Response<Map<String, String>>
+    @GET("api/conversations/pending/count")
+    suspend fun getPendingCount(): PendingCountResponse
 
-    @DELETE("api/users/avatar")
-    suspend fun deleteAvatar(): Response<Map<String, String>>
-
-    @PATCH("api/messages/conversation/{conversationId}/read")
-    suspend fun markConversationAsRead(
+    @POST("api/conversations/{conversationId}/assume")
+    suspend fun assumeConversation(
         @Path("conversationId") conversationId: String
-    ): Response<Unit>
+    ): Response<AssumeResponse>
+
+    @GET("api/conversations/{conversationId}/status")
+    suspend fun getConversationStatus(
+        @Path("conversationId") conversationId: String
+    ): ConversationStatusResponse
+
+    @POST("api/conversations/{conversationId}/close")
+    suspend fun closeConversation(
+        @Path("conversationId") conversationId: String
+    ): Response<Void>
 }

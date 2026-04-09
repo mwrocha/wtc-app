@@ -2,7 +2,9 @@ package br.com.fiap.wtcconnecta.ui.screens.client
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -101,13 +103,9 @@ fun CampaignExpressScreen(
         viewModel.startPolling()
     }
 
-    Scaffold(
-        containerColor = Color(0xFFF5FAFD)
-    ) { innerPadding ->
+    Scaffold(containerColor = Color(0xFFF5FAFD)) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
             // Header gradiente
             Box(
@@ -167,10 +165,7 @@ fun EmptyCampaignsState() {
         verticalArrangement = Arrangement.Center
     ) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(WtcBluePale),
+            modifier = Modifier.size(80.dp).clip(CircleShape).background(WtcBluePale),
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Campaign, contentDescription = null,
@@ -192,6 +187,11 @@ fun CampaignExpressCard(
 ) {
     val context = LocalContext.current
 
+    // ── Corpo da campanha com expansão ────────────────────────────────────────
+    val bodyText = campaign.body?.ifBlank { null } ?: campaign.displayContent.ifBlank { null }
+    val hasLongBody = (bodyText?.length ?: 0) > 100
+    var isExpanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -200,12 +200,10 @@ fun CampaignExpressCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Header
+            // ── Header ────────────────────────────────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
                         .background(WtcBluePale),
                     contentAlignment = Alignment.Center
                 ) {
@@ -219,7 +217,7 @@ fun CampaignExpressCard(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
@@ -228,32 +226,51 @@ fun CampaignExpressCard(
                         color = TextMuted
                     )
                 }
-                // Badge enviada
-                Surface(
-                    color = WtcBluePale,
-                    shape = RoundedCornerShape(20.dp)
-                ) {
+                Surface(color = WtcBluePale, shape = RoundedCornerShape(20.dp)) {
                     Text("Enviada", fontSize = 10.sp, color = WtcBlue,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFF0F6FA))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Corpo
-            Text(
-                text = campaign.content,
-                fontSize = 14.sp,
-                color = TextMuted,
-                lineHeight = 20.sp
-            )
-
-            // URL
-            campaign.url?.takeIf { it.isNotBlank() }?.let { url ->
+            // ── Corpo expansível ──────────────────────────────────────────────
+            if (!bodyText.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFF0F6FA))
                 Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = bodyText,
+                    fontSize = 14.sp,
+                    color = TextMuted,
+                    lineHeight = 20.sp,
+                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                    overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
+                )
+
+                if (hasLongBody) {
+                    TextButton(
+                        onClick = { isExpanded = !isExpanded },
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = WtcBlue
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            if (isExpanded) "Ver menos" else "Ver mais",
+                            fontSize = 12.sp, color = WtcBlue
+                        )
+                    }
+                }
+            }
+
+            // ── URL "Saiba mais" ──────────────────────────────────────────────
+            campaign.url?.takeIf { it.isNotBlank() }?.let { url ->
+                Spacer(modifier = Modifier.height(8.dp))
                 val isDeepLink = url.startsWith("wtcconnecta://")
                 TextButton(
                     onClick = {
@@ -279,14 +296,18 @@ fun CampaignExpressCard(
                 }
             }
 
-            // Botões de ação
+            // ── Botões de ação ────────────────────────────────────────────────
             campaign.actions?.takeIf { it.isNotEmpty() }?.let { actions ->
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    actions.forEachIndexed { _, action ->
-                        val actionUrl = campaign.actionUrls?.get(action.action)
-                            ?: if (actions.size == 1) campaign.url ?: "" else ""
+                    actions.forEach { action ->
+                        // Prioridade: actionUrls → url da campanha (se 1 botão) → wtcconnecta://chat
+                        val fromActionUrls = campaign.actionUrls?.get(action.action)?.takeIf { it.isNotBlank() }
+                        val fromCampaignUrl = if (actions.size == 1) campaign.url?.takeIf { it.isNotBlank() } else null
+                        val actionUrl: String = fromActionUrls ?: fromCampaignUrl ?: "wtcconnecta://chat"
+
                         val isDeepLink = actionUrl.startsWith("wtcconnecta://")
+
                         Button(
                             onClick = {
                                 when {
@@ -304,11 +325,12 @@ fun CampaignExpressCard(
                             colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
                         ) {
                             if (isDeepLink) {
-                                Icon(Icons.Default.Launch, contentDescription = null,
+                                Icon(Icons.Default.Chat, contentDescription = null,
                                     modifier = Modifier.size(13.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                             }
-                            Text(action.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(action.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -320,6 +342,8 @@ fun CampaignExpressCard(
 private fun formatCampaignTime(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
     return try {
-        "${createdAt.substring(0, 10)} às ${createdAt.substring(11, 16)}"
+        val date = createdAt.take(10)
+        val time = createdAt.drop(11).take(5)
+        "$date às $time"
     } catch (e: Exception) { "" }
 }

@@ -22,10 +22,12 @@ data class ClientDetailUiState(
     val client: Client? = null,
     val notes: List<Note> = emptyList(),
     val messages: List<Message> = emptyList(),
+    val campaigns: List<Message> = emptyList(),
     val divisions: List<Division> = emptyList(),
     val groups: List<Group> = emptyList(),
     val error: String? = null,
-    val senderNames: Map<String, String> = emptyMap()
+    val senderNames: Map<String, String> = emptyMap(),
+    val attendanceClosed: Boolean = false  // ← sinaliza encerramento para a UI
 )
 
 class ClientDetailViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
@@ -77,11 +79,13 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                 val notesDeferred        = async { safeApiCall { repository.getNotesForClient(clientId) } }
                 val divisionsDeferred    = async { safeApiCall { repository.getDivisions() } }
                 val groupsDeferred       = async { safeApiCall { repository.getGroups() } }
+                val campaignsDeferred    = async { safeApiCall { repository.getCampaignsForClient(clientId) } }
 
                 val conversation = conversationDeferred.await() ?: emptyList()
                 val notes        = notesDeferred.await() ?: emptyList()
                 val divisions    = divisionsDeferred.await() ?: emptyList()
                 val groups       = groupsDeferred.await() ?: emptyList()
+                val campaigns    = campaignsDeferred.await() ?: emptyList()
 
                 // DEBUG TEMPORÁRIO
                 Log.d("MSG_DEBUG", "Total mensagens: ${conversation.size}")
@@ -102,6 +106,7 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                         client      = client,
                         notes       = notes,
                         messages    = conversation,
+                        campaigns   = campaigns,
                         divisions   = divisions,
                         groups      = groups,
                         senderNames = it.senderNames + newNames
@@ -162,12 +167,12 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         return names
     }
 
-    fun updateClientProfile(divisionId: String, groupId: String) {
+    fun updateClientProfile(divisionId: String, groupId: String, tags: List<String> = emptyList()) {
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             try {
                 val updated = client.copy(divisionId = divisionId, groupId = groupId,
-                    tags = client.tags.orEmpty(), noteIds = client.noteIds.orEmpty())
+                    tags = tags, noteIds = client.noteIds.orEmpty())
                 repository.updateClient(client.id, updated)
                 _uiState.update { it.copy(client = updated) }
             } catch (e: Exception) {
@@ -191,17 +196,41 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
 
     fun updateNote(note: Note, newText: String, clientId: String) {
         viewModelScope.launch {
-            val updated = note.copy(text = newText)
-            _uiState.update { state ->
-                state.copy(notes = state.notes.map { if (it.id == note.id) updated else it })
+            try {
+                val response = RetrofitClient.instance.updateNote(note.id, mapOf("content" to newText))
+                if (response.isSuccessful) {
+                    // Atualiza localmente após confirmação do backend
+                    _uiState.update { state ->
+                        state.copy(notes = state.notes.map {
+                            if (it.id == note.id) it.copy(text = newText) else it
+                        })
+                    }
+                }
+            } catch (e: Exception) {
+                // Fallback local se falhar
+                _uiState.update { state ->
+                    state.copy(notes = state.notes.map {
+                        if (it.id == note.id) it.copy(text = newText) else it
+                    })
+                }
             }
         }
     }
 
     fun deleteNote(noteId: String, clientId: String) {
         viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(notes = state.notes.filter { it.id != noteId })
+            try {
+                val response = RetrofitClient.instance.deleteNote(noteId)
+                if (response.isSuccessful) {
+                    _uiState.update { state ->
+                        state.copy(notes = state.notes.filter { it.id != noteId })
+                    }
+                }
+            } catch (e: Exception) {
+                // Fallback local se falhar
+                _uiState.update { state ->
+                    state.copy(notes = state.notes.filter { it.id != noteId })
+                }
             }
         }
     }
@@ -228,6 +257,36 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
             }
         }
     }
+
+    // ── Encerrar atendimento ──────────────────────────────────────────────────
+    fun closeAttendance(clientId: String) {
+        viewModelScope.launch {
+            try {
+                val operatorEmail  = getOperatorEmail() ?: return@launch
+                val clientEmail    = _uiState.value.client?.email ?: clientId
+                val conversationId = buildConversationId(clientEmail, operatorEmail)
+
+                // 1. Encerra na fila (muda status para CLOSED)
+                RetrofitClient.instance.closeConversation(conversationId)
+
+                // 2. Envia mensagem automática de encerramento ao cliente
+                val farewell = "✅ Atendimento encerrado. Obrigado pelo contato! " +
+                        "Caso precise de mais ajuda, estamos à disposição."
+                repository.sendMessage(receiverId = clientEmail, content = farewell)
+
+                // 3. Recarrega mensagens e sinaliza encerramento para a UI
+                val updated = safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
+                _uiState.update { it.copy(messages = updated, attendanceClosed = true) }
+
+                Log.d("ClientDetailVM", "Atendimento encerrado: $conversationId")
+            } catch (e: Exception) {
+                Log.e("ClientDetailVM", "Erro ao encerrar atendimento: ${e.message}")
+                _uiState.update { it.copy(error = "Erro ao encerrar atendimento.") }
+            }
+        }
+    }
+
+    fun clearAttendanceClosed() { _uiState.update { it.copy(attendanceClosed = false) } }
 
     fun getSenderName(senderId: String): String =
         _uiState.value.senderNames[senderId] ?: senderId
