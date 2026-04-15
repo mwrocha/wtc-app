@@ -161,13 +161,18 @@ fun CampaignScreen(
     }
 }
 
+// ── Card de Campanha ──────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit) {
     val isSent      = campaign.status == "SENT"
     val statusColor = if (isSent) ColorSent else ColorDraft
     val statusLabel = if (isSent) "Enviada" else "Rascunho"
+    var showSheet   by remember { mutableStateOf(false) }
 
     Card(
+        onClick   = { showSheet = true },
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
@@ -198,7 +203,7 @@ fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit)
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                     }
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { onEdit(); }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar",
                             tint = WtcBlue, modifier = Modifier.size(16.dp))
                     }
@@ -248,6 +253,113 @@ fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit)
                         modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Disparar Agora", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
+            }
+        }
+    }
+
+    // ── Bottom Sheet com detalhes completos ───────────────────────────────────
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor   = Color.White,
+            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Campaign, contentDescription = null,
+                            tint = WtcBlue, modifier = Modifier.size(22.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(campaign.title, fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(formatCampaignDate(campaign.createdAt),
+                            fontSize = 11.sp, color = TextMuted)
+                    }
+                    Surface(color = statusColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(20.dp)) {
+                        Text(statusLabel, fontSize = 11.sp, color = statusColor,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF0F6FA))
+
+                // Mensagem completa
+                Text("Mensagem", fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold, color = TextMuted)
+                Text(campaign.body, fontSize = 14.sp,
+                    color = TextPrimary, lineHeight = 20.sp)
+
+                // URL
+                campaign.url?.takeIf { it.isNotBlank() }?.let { url ->
+                    HorizontalDivider(color = Color(0xFFF0F6FA))
+                    Text("Link", fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold, color = TextMuted)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.Link, contentDescription = null,
+                            tint = WtcBlue, modifier = Modifier.size(14.dp))
+                        Text(url, fontSize = 13.sp, color = WtcBlue,
+                            overflow = TextOverflow.Ellipsis, maxLines = 2)
+                    }
+                }
+
+                // Botões de ação
+                campaign.actions?.takeIf { it.isNotEmpty() }?.let { actions ->
+                    HorizontalDivider(color = Color(0xFFF0F6FA))
+                    Text("Botões de ação", fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold, color = TextMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        actions.forEach { action ->
+                            Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
+                                Text(action.title, fontSize = 13.sp, color = WtcBlue,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Ações — editar e disparar
+                HorizontalDivider(color = Color(0xFFF0F6FA))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { showSheet = false; onEdit() },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = WtcBlue),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, WtcBlue.copy(alpha = 0.5f))
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null,
+                            modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Editar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (!isSent) {
+                        Button(
+                            onClick = { showSheet = false; onDispatch() },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null,
+                                modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Disparar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
@@ -550,6 +662,9 @@ private fun buildActionUrls(
 
 private fun formatCampaignDate(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
-    return try { "${createdAt.substring(0, 10)} às ${createdAt.substring(11, 16)}" }
-    catch (e: Exception) { "" }
+    return try {
+        val date = createdAt.take(10).split("-")  // [2026, 04, 08]
+        val time = createdAt.drop(11).take(5)     // 00:44
+        "${date[2]}/${date[1]}/${date[0]} às $time"
+    } catch (e: Exception) { "" }
 }

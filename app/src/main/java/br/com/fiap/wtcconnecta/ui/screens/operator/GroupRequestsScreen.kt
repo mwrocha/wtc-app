@@ -231,6 +231,7 @@ fun GroupRequestsScreen(
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupRequestCard(
     request: GroupChangeRequestItem,
@@ -247,8 +248,10 @@ fun GroupRequestCard(
         "REJECTED" -> "Rejeitada"
         else       -> "Pendente"
     }
+    var showSheet by remember { mutableStateOf(false) }
 
     Card(
+        onClick   = { showSheet = true },
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(16.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
@@ -350,6 +353,113 @@ fun GroupRequestCard(
                             modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Aprovar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Bottom Sheet com detalhes completos ───────────────────────────────────
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor   = Color.White,
+            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(modifier = Modifier.size(48.dp).clip(CircleShape)
+                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                        Text(request.clientName.firstOrNull()?.uppercase() ?: "?",
+                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlue)
+                    }
+                    Column {
+                        Text(request.clientName, fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(request.clientEmail, fontSize = 12.sp, color = TextMuted)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Surface(color = statusColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(20.dp)) {
+                        Text(statusLabel, fontSize = 11.sp, color = statusColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF0F6FA))
+
+                // Troca de grupo
+                Text("Mudança solicitada", fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold, color = TextMuted)
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
+                        Text(request.currentGroupName.ifBlank { "Nenhum" },
+                            fontSize = 13.sp, color = TextMuted,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                    }
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
+                        tint = WtcBlueHint, modifier = Modifier.size(18.dp))
+                    Surface(color = WtcBlue.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
+                        Text(request.requestedGroupName, fontSize = 13.sp,
+                            color = WtcBlue, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                    }
+                }
+
+                // Motivo completo
+                if (request.reason.isNotBlank()) {
+                    Text("Motivo", fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold, color = TextMuted)
+                    Surface(color = Color(0xFFF8FAFB), shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Info, contentDescription = null,
+                                tint = TextMuted, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(request.reason, fontSize = 13.sp,
+                                color = TextPrimary, lineHeight = 20.sp)
+                        }
+                    }
+                }
+
+                // Botões no sheet para pendentes
+                if (onApprove != null && onReject != null) {
+                    HorizontalDivider(color = Color(0xFFF0F6FA))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { onReject(); showSheet = false },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorRejected),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ColorRejected.copy(alpha = 0.5f))
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null,
+                                modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Rejeitar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Button(
+                            onClick = { onApprove(); showSheet = false },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = ColorApproved)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null,
+                                modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Aprovar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }

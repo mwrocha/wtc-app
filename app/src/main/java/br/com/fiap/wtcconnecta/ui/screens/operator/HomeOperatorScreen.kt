@@ -618,7 +618,9 @@ fun GroupMessageDialog(
                 OutlinedTextField(
                     value = messageText, onValueChange = { messageText = it },
                     label = { Text("Mensagem") },
-                    modifier = Modifier.fillMaxWidth(), maxLines = 4,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                    minLines = 4,
+                    maxLines = Int.MAX_VALUE,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,

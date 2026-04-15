@@ -277,7 +277,7 @@ fun AuditScreen(
                             FilterChip(
                                 selected = uiState.filterEntity == entity,
                                 onClick  = { viewModel.setFilterEntity(if (uiState.filterEntity == entity) null else entity) },
-                                label    = { Text(entity, fontSize = 11.sp) },
+                                label    = { Text(entityLabel(entity), fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = WtcBlue,
                                     selectedLabelColor     = Color.White,
@@ -323,12 +323,15 @@ fun AuditScreen(
 
 // ── Card de log ───────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
     val actionColor = actionColorStatic(log.action)
     val isMe        = log.performedBy == currentUserEmail
+    var showSheet   by remember { mutableStateOf(false) }
 
     Card(
+        onClick   = { showSheet = true },
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(14.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
@@ -354,7 +357,7 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(log.entity, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        Text(entityLabel(log.entity), fontSize = 13.sp, fontWeight = FontWeight.Bold,
                             color = TextPrimary)
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(color = actionColor.copy(alpha = 0.12f),
@@ -374,24 +377,114 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = null,
-                        modifier = Modifier.size(11.dp),
-                        tint = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.6f))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        if (isMe) "Você (${log.performedBy})" else log.performedBy,
-                        fontSize = 10.sp,
-                        color = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.7f),
-                        fontWeight = if (isMe) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Person, contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.6f))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            if (isMe) "Você (${log.performedBy})" else log.performedBy,
+                            fontSize = 10.sp,
+                            color = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.7f),
+                            fontWeight = if (isMe) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null,
+                        tint = WtcBlueHint, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
+
+    // ── Bottom Sheet com detalhes completos ───────────────────────────────────
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor   = Color.White,
+            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Título
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(
+                        modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
+                            .background(actionColor.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(actionIcon(log.action), contentDescription = null,
+                            tint = actionColor, modifier = Modifier.size(20.dp))
+                    }
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(entityLabel(log.entity), fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Surface(color = actionColor.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(6.dp)) {
+                                Text(actionLabel(log.action), fontSize = 11.sp,
+                                    color = actionColor, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+                        Text(formatTimestamp(log.timestamp), fontSize = 11.sp, color = TextMuted)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF0F6FA))
+
+                // Descrição completa
+                Text("Descrição", fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold, color = TextMuted)
+                Text(log.description, fontSize = 14.sp,
+                    color = TextPrimary, lineHeight = 20.sp)
+
+                HorizontalDivider(color = Color(0xFFF0F6FA))
+
+                // Detalhes
+                DetailRow(label = "Operador", value = log.performedBy,
+                    highlight = isMe)
+                if (log.entityId.isNotBlank()) {
+                    DetailRow(label = "ID do registro", value = log.entityId)
                 }
             }
         }
     }
 }
 
+@Composable
+private fun DetailRow(label: String, value: String, highlight: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, fontSize = 12.sp, color = TextMuted)
+        Text(value, fontSize = 12.sp,
+            color = if (highlight) WtcBlue else TextPrimary,
+            fontWeight = if (highlight) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+fun entityLabel(entity: String) = when (entity.lowercase()) {
+    "campaign"           -> "Campanha"
+    "groupchangerequest" -> "Mudança de Grupo"
+    "note"               -> "Anotação"
+    "user"               -> "Usuário"
+    "message"            -> "Mensagem"
+    else                 -> entity
+}
 
 fun actionLabel(action: String) = when (action) {
     "CREATE"   -> "Criação"
@@ -428,6 +521,8 @@ fun actionIcon(action: String): ImageVector = when (action) {
 fun formatTimestamp(timestamp: String?): String {
     if (timestamp.isNullOrBlank()) return ""
     return try {
-        "${timestamp.substring(0, 10)} às ${timestamp.substring(11, 16)}"
+        val date = timestamp.take(10).split("-")  // [2026, 04, 08]
+        val time = timestamp.drop(11).take(5)     // 02:41
+        "${date[2]}-${date[1]}-${date[0]} às $time"
     } catch (e: Exception) { timestamp }
 }
