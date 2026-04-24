@@ -23,7 +23,7 @@ data class ConversationListUiState(
     val lastMessages: Map<String, Message> = emptyMap(),
     val lastMessageIds: Map<String, String> = emptyMap(),
     val conversationIds: Map<String, String> = emptyMap(),
-    val operatorEmail: String? = null, // ← email do operador para iniciar conversa 1:1
+    val operatorEmail: String? = null,
     val error: String? = null
 )
 
@@ -63,50 +63,63 @@ class ConversationListViewModel(
             val client = _uiState.value.client ?: return
             val loggedEmail = getLoggedEmail()
 
-            // Busca todas as conversas do usuário logado
             val allMessages = repository.getMyConversations()
 
-            // Resolve o conversationId real da conversa 1:1
-            // É o conversationId que contém o email do cliente E não é de grupo/campanha
+            // Filtra apenas mensagens diretas do usuário logado — sem ID MongoDB
             val directMessages = allMessages.filter { msg ->
                 msg.type == "CHAT" &&
                         msg.groupId == null &&
                         !msg.conversationId.orEmpty().startsWith("campaign_") &&
-                        (msg.senderId == loggedEmail || msg.recipientId == loggedEmail || msg.recipientId == client.id)
+                        (msg.senderId == loggedEmail || msg.recipientId == loggedEmail)
             }
 
-            // Pega o conversationId correto da conversa 1:1
+            // conversationId válido: contém @ E contém o email do usuário logado
             val real1on1ConversationId = directMessages
-                .firstOrNull { it.conversationId?.contains("@") == true }
+                .firstOrNull {
+                    it.conversationId?.contains("@") == true &&
+                            loggedEmail != null &&
+                            it.conversationId.orEmpty().contains(loggedEmail)
+                }
                 ?.conversationId
                 ?: run {
-                    // Fallback: monta o conversationId a partir dos emails
                     val operatorEmail = directMessages
                         .map { if (it.senderId == loggedEmail) it.recipientId else it.senderId }
                         .firstOrNull { it?.contains("@") == true }
                     if (operatorEmail != null && loggedEmail != null) {
-                        "${loggedEmail}_${operatorEmail}"
+                        val sorted = listOf(loggedEmail, operatorEmail).sorted()
+                        "${sorted[0]}_${sorted[1]}"
                     } else null
                 }
 
             Log.d("ConversationListVM", "conversationId 1:1 resolvido: $real1on1ConversationId")
 
             if (real1on1ConversationId != null) {
-                // Salva o mapeamento clientId → conversationId real
                 _uiState.update { state ->
                     state.copy(
                         conversationIds = state.conversationIds + (client.id to real1on1ConversationId)
                     )
                 }
-                // Filtra mensagens desta conversa
+
                 val conv1on1 = directMessages.filter {
                     it.conversationId == real1on1ConversationId
                 }
-                // Tenta descobrir email do operador a partir do histórico
-                val operatorEmail = conv1on1.firstOrNull { it.senderId != loggedEmail }?.senderId
-                if (operatorEmail != null) {
-                    _uiState.update { it.copy(operatorEmail = operatorEmail) }
+
+                // ── Operador: extrai do conversationId, não do senderId das mensagens ──
+                // Evita capturar email de outro cliente como se fosse operador
+                if (loggedEmail != null && real1on1ConversationId.contains(loggedEmail)) {
+                    val parts = real1on1ConversationId.split("_")
+                    // conversationId = emailA_emailB — pega o que não é o loggedEmail
+                    val firstAt    = real1on1ConversationId.indexOf("@")
+                    val splitPoint = real1on1ConversationId.indexOf("_", firstAt)
+                    if (splitPoint > 0) {
+                        val emailA = real1on1ConversationId.substring(0, splitPoint)
+                        val emailB = real1on1ConversationId.substring(splitPoint + 1)
+                        val resolvedOperator = if (emailA == loggedEmail) emailB else emailA
+                        Log.d("ConversationListVM", "operatorEmail resolvido do conversationId: $resolvedOperator")
+                        _uiState.update { it.copy(operatorEmail = resolvedOperator) }
+                    }
                 }
+
                 checkNewMessages(conv1on1, real1on1ConversationId, "Atendimento WTC", loggedEmail)
             } else {
                 // Sem histórico 1:1 — tenta descobrir operador pelo grupo
@@ -121,7 +134,6 @@ class ConversationListViewModel(
                 }
             }
 
-            // Grupos
             _uiState.value.groups.forEach { group ->
                 val groupMessages = repository.getConversation(group.id)
                 checkNewMessages(groupMessages, group.id, group.name, loggedEmail)
@@ -135,12 +147,10 @@ class ConversationListViewModel(
         }
     }
 
-    // Retorna o conversationId real para usar ao navegar para o chat
     fun getConversationId(clientId: String): String {
         return _uiState.value.conversationIds[clientId] ?: clientId
     }
 
-    // Retorna o email do operador para iniciar conversa 1:1 mesmo sem histórico
     fun getOperatorEmail(): String? = _uiState.value.operatorEmail
 
     private fun getLoggedEmail(): String? {
@@ -175,7 +185,6 @@ class ConversationListViewModel(
             _uiState.update { state ->
                 state.copy(lastMessageIds = state.lastMessageIds + (chatId to lastMessage.id))
             }
-            // Só notifica se não foi o próprio usuário que enviou
             if (lastKnownId != null && lastMessage.senderId != loggedEmail) {
                 _newMessageEvent.emit("Nova mensagem em $chatName")
             }
