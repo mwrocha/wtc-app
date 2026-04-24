@@ -290,6 +290,9 @@ interface ApiService {
     @GET("api/conversations/my-active")
     suspend fun getMyActiveConversations(): List<PendingConversation>
 
+    @GET("api/conversations/my-closed-sessions")
+    suspend fun getMyClosedSessions(): List<Map<String, String>>
+
     @GET("api/conversations/my-stats")
     suspend fun getMyAttendanceStats(): Map<String, Long>
 }
