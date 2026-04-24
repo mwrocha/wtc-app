@@ -31,14 +31,15 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
         val groupId        = remoteMessage.data["groupId"]        ?: ""
         val senderId       = remoteMessage.data["senderId"]       ?: ""
 
-        // Ignorar notificação se o remetente for o próprio usuário logado
         val loggedUserEmail = getEmailFromToken(RetrofitClient.authToken)
+
+        // ── Ignorar push do próprio usuário ───────────────────────────────────
         if (senderId.isNotBlank() && loggedUserEmail != null && senderId == loggedUserEmail) {
             Log.d("FCM", "Push ignorado — remetente é o próprio usuário logado")
             return
         }
 
-        // GROUP_REQUEST — solicitação de troca de grupo (operador)
+        // ── GROUP_REQUEST ─────────────────────────────────────────────────────
         if (type == "GROUP_REQUEST") {
             Log.d("FCM", "Push de solicitação de grupo recebido")
             InAppNotificationState.show(
@@ -59,9 +60,21 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
         val chatName = if (type == "GROUP") "Grupo" else "Atendimento WTC"
         val chatType = if (type == "GROUP") "group" else "1on1"
 
+        // ── Validação de segurança para mensagens DIRECT ──────────────────────
+        // O conversationId deve conter o email do remetente OU do usuário logado.
+        // Evita que um push com chatId de outra conversa abra o chat errado.
+        if (type == "DIRECT" && loggedUserEmail != null && senderId.isNotBlank()) {
+            val chatIdContainsSender = chatId.contains(senderId)
+            val chatIdContainsMe     = chatId.contains(loggedUserEmail)
+            if (!chatIdContainsSender && !chatIdContainsMe) {
+                Log.w("FCM", "Push descartado por segurança — " +
+                        "chatId=$chatId não contém sender=$senderId nem loggedUser=$loggedUserEmail")
+                return
+            }
+        }
+
         Log.d("FCM", "Push recebido: type=$type chatId=$chatId")
 
-        // Banner in-app clicável com os dados do chat
         InAppNotificationState.show(
             InAppNotification(
                 title    = title,
@@ -73,13 +86,12 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
             )
         )
 
-        // Notificação simples do sistema (sem deep link por agora)
         showSystemNotification(title, body)
     }
 
     private fun showSystemNotification(title: String, body: String) {
         createNotificationChannel()
-        val notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.logo_login)
             .setContentTitle(title)
             .setContentText(body)
@@ -110,7 +122,6 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
                 android.util.Base64.URL_SAFE
             )
             val json = String(decoded)
-            // Extrai o campo sub do JWT payload
             val start = json.indexOf("\"sub\"") + 7
             val end = json.indexOf("\"", start)
             if (start > 6 && end > start) json.substring(start, end) else null
@@ -118,11 +129,15 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
-        Log.d("FCM", "Novo token: $token")
+        Log.d("FCM", "Novo token FCM gerado: $token")
         RetrofitClient.authToken ?: return
         CoroutineScope(Dispatchers.IO).launch {
-            try { RetrofitClient.instance.updateFcmToken(mapOf("token" to token)) }
-            catch (e: Exception) { Log.e("FCM", "Erro token: ${e.message}") }
+            try {
+                RetrofitClient.instance.updateFcmToken(mapOf("fcmToken" to token))
+                Log.d("FCM", "Novo token FCM enviado ao servidor com sucesso")
+            } catch (e: Exception) {
+                Log.e("FCM", "Erro ao enviar novo token FCM: ${e.message}")
+            }
         }
     }
 }
