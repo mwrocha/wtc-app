@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,73 +27,127 @@ import br.com.fiap.wtcconnecta.viewmodel.AttendanceQueueViewModel
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
+private val ColorActive = Color(0xFF1A7A5E)
+private val ColorQueue  = Color(0xFFE65100)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceQueueScreen(
     onBack: () -> Unit,
     onAssumeAndNavigate: (clientId: String, clientName: String) -> Unit,
+    onNavigateToActive: (clientId: String, clientName: String) -> Unit = { _, _ -> },
     viewModel: AttendanceQueueViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState           by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { viewModel.load() }
 
-    // Ao assumir com sucesso, navega direto para o ClientDetailScreen
     LaunchedEffect(uiState.assumeSuccess) {
         uiState.assumeSuccess?.let {
             val clientId   = uiState.assumedClientId   ?: ""
             val clientName = uiState.assumedClientName ?: "Cliente"
-            if (clientId.isNotBlank()) {
-                onAssumeAndNavigate(clientId, clientName)
-            }
+            if (clientId.isNotBlank()) onAssumeAndNavigate(clientId, clientName)
             viewModel.clearAssumeSuccess()
         }
     }
 
     LaunchedEffect(uiState.error) {
-        uiState.error?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
-        }
+        uiState.error?.let { snackbarHostState.showSnackbar(it); viewModel.clearError() }
     }
+
+    val totalActive  = uiState.activeConversations.size
+    val totalPending = uiState.pendingConversations.size
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5FAFD)
+        containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // ── Header ────────────────────────────────────────────────────────
+            // ── Header Hero ───────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(180.dp).offset(x = 200.dp, y = (-30).dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier.size(110.dp).offset(x = 260.dp, y = 40.dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.06f))
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 28.dp)
+                ) {
                     IconButton(
-                        onClick = onBack,
+                        onClick  = onBack,
                         modifier = Modifier.size(36.dp)
                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
                             tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("Fila de Atendimento", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = Color.White)
-                        Text(
-                            if (uiState.pendingConversations.isEmpty()) "Nenhuma conversa pendente"
-                            else "${uiState.pendingConversations.size} aguardando atendimento",
-                            fontSize = 13.sp, color = Color.White.copy(alpha = 0.72f)
-                        )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Atendimentos", fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Gerencie seus atendimentos em andamento",
+                        fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f))
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Pills de contagem
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (totalActive > 0) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape)
+                                        .background(Color(0xFF4CAF50)))
+                                    Text("$totalActive em andamento",
+                                        fontSize = 11.sp, color = Color.White.copy(alpha = 0.90f),
+                                        fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                        if (totalPending > 0) {
+                            Surface(
+                                color = Color.White.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape)
+                                        .background(ColorQueue))
+                                    Text("$totalPending aguardando",
+                                        fontSize = 11.sp, color = Color.White.copy(alpha = 0.90f),
+                                        fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -101,43 +156,174 @@ fun AttendanceQueueScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
-                uiState.pendingConversations.isEmpty() -> Box(
+                totalActive == 0 && totalPending == 0 -> Box(
                     Modifier.fillMaxSize(), Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Box(
-                            modifier = Modifier.size(72.dp).clip(CircleShape)
+                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
                                 .background(WtcBluePale),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null,
                                 tint = WtcBlue, modifier = Modifier.size(36.dp))
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                         Text("Tudo em dia!", fontSize = 16.sp,
                             fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text("Nenhuma conversa aguardando atendimento.",
-                            fontSize = 13.sp, color = TextMuted,
-                            modifier = Modifier.padding(top = 4.dp))
+                        Text("Nenhum atendimento pendente ou ativo.",
+                            fontSize = 13.sp, color = TextMuted)
                     }
                 }
                 else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 20.dp, bottom = 24.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(uiState.pendingConversations) { conv ->
-                        PendingConversationCard(
-                            conversation = conv,
-                            isAssuming   = uiState.isAssuming,
-                            onAssume     = { viewModel.assumeConversation(conv.conversationId) }
-                        )
+
+                    // ── Seção: Meus Atendimentos ──────────────────────────────
+                    if (totalActive > 0) {
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            ) {
+                                Text("MEUS ATENDIMENTOS", fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ColorActive, letterSpacing = 1.2.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    color = ColorActive.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
+                                    Text("$totalActive", fontSize = 10.sp,
+                                        color = ColorActive, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                                }
+                            }
+                        }
+                        items(uiState.activeConversations) { conv ->
+                            ActiveConversationCard(
+                                conversation = conv,
+                                onClick = { onNavigateToActive(conv.clientId, conv.clientName) }
+                            )
+                        }
+                    }
+
+                    // ── Seção: Fila de Espera ─────────────────────────────────
+                    if (totalPending > 0) {
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(
+                                    top = if (totalActive > 0) 12.dp else 0.dp,
+                                    bottom = 4.dp
+                                )
+                            ) {
+                                Text("FILA DE ESPERA", fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ColorQueue, letterSpacing = 1.2.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    color = ColorQueue.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
+                                    Text("$totalPending", fontSize = 10.sp,
+                                        color = ColorQueue, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                                }
+                            }
+                        }
+                        items(uiState.pendingConversations) { conv ->
+                            PendingConversationCard(
+                                conversation = conv,
+                                isAssuming   = uiState.isAssuming,
+                                onAssume     = { viewModel.assumeConversation(conv.conversationId) }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+// ── Card: Atendimento ativo (IN_PROGRESS) ─────────────────────────────────────
+
+@Composable
+fun ActiveConversationCard(
+    conversation: PendingConversation,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick   = onClick,
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar
+            Box(
+                modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
+                    .background(Color(0xFFEDF7F2)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    conversation.clientName.firstOrNull()?.uppercase() ?: "?",
+                    fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ColorActive
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(conversation.clientName, fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(conversation.clientEmail, fontSize = 11.sp, color = TextMuted)
+                if (conversation.lastMessagePreview.isNotBlank()) {
+                    Text(
+                        conversation.lastMessagePreview,
+                        fontSize = 12.sp, color = TextMuted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Surface(
+                    color = ColorActive.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape)
+                            .background(ColorActive))
+                        Text("Ativo", fontSize = 10.sp,
+                            color = ColorActive, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier.size(28.dp).clip(CircleShape).background(WtcBlueHint),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null,
+                        tint = WtcBlueDark, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+    }
+}
+
+// ── Card: Conversa pendente (OPEN) ────────────────────────────────────────────
 
 @Composable
 fun PendingConversationCard(
@@ -147,87 +333,81 @@ fun PendingConversationCard(
 ) {
     Card(
         modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
+        shape     = RoundedCornerShape(20.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Avatar com inicial
                 Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape)
-                        .background(WtcBluePale),
+                    modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
+                        .background(WtcBlueHint),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         conversation.clientName.firstOrNull()?.uppercase() ?: "?",
-                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlue
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(conversation.clientName, fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     Text(conversation.clientEmail, fontSize = 11.sp, color = TextMuted)
                 }
-                // Badge AGUARDANDO
                 Surface(
-                    color = Color(0xFFFFF3E0),
+                    color = ColorQueue.copy(alpha = 0.10f),
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Box(modifier = Modifier.size(6.dp).clip(CircleShape)
-                            .background(Color(0xFFE65100)))
-                        Spacer(modifier = Modifier.width(4.dp))
+                            .background(ColorQueue))
                         Text("Aguardando", fontSize = 10.sp,
-                            color = Color(0xFFE65100), fontWeight = FontWeight.SemiBold)
+                            color = ColorQueue, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Preview da última mensagem
             if (conversation.lastMessagePreview.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
                 Surface(
-                    color = WtcBluePale,
-                    shape = RoundedCornerShape(8.dp),
+                    color    = Color(0xFFF5FAFD),
+                    shape    = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         "\"${conversation.lastMessagePreview}\"",
-                        fontSize = 12.sp, color = TextMuted, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontSize = 12.sp, color = TextMuted,
+                        fontStyle = FontStyle.Italic,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Tempo aguardando
             if (conversation.updatedAt.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Schedule, contentDescription = null,
                         tint = TextMuted, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "Última mensagem: ${formatQueueTime(conversation.updatedAt)}",
-                        fontSize = 11.sp, color = TextMuted
-                    )
+                    Text("Última mensagem: ${formatQueueTime(conversation.updatedAt)}",
+                        fontSize = 11.sp, color = TextMuted)
                 }
-                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // Botão assumir
+            Spacer(modifier = Modifier.height(12.dp))
+
             Button(
-                onClick   = onAssume,
-                enabled   = !isAssuming,
-                modifier  = Modifier.fillMaxWidth().height(44.dp),
-                shape     = RoundedCornerShape(12.dp),
-                colors    = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                onClick  = onAssume,
+                enabled  = !isAssuming,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape    = RoundedCornerShape(12.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = WtcBlue)
             ) {
                 if (isAssuming) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp),
@@ -245,10 +425,9 @@ fun PendingConversationCard(
 
 private fun formatQueueTime(dateStr: String): String {
     return try {
-        // "2026-03-30T14:43:41" → "14:43"
         val timePart = dateStr.substringAfter("T").take(5)
-        val parts = timePart.split(":")
-        if (parts.size >= 2) "${parts[0].padStart(2,'0')}:${parts[1].padStart(2,'0')}"
+        val parts    = timePart.split(":")
+        if (parts.size >= 2) "${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}"
         else timePart
     } catch (_: Exception) { "" }
 }
