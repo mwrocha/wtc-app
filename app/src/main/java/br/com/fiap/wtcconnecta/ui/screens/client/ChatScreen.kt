@@ -15,7 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,17 +35,16 @@ import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
 import br.com.fiap.wtcconnecta.ui.components.MessageStatusIcon
 import br.com.fiap.wtcconnecta.data.model.MessageStatus
 
+private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBluePale = Color(0xFFEEF6FB)
+private val WtcBlueHint = Color(0xFFD0E8F2)
+private val WtcBlueDark = Color(0xFF063D5C)
+private val BubbleOwn   = Color(0xFF0B537B)
+private val BubbleOther = Color.White
+private val TextPrimary = Color(0xFF0D2B3E)
+private val TextMuted   = Color(0xFF6E90A0)
 
-private val WtcBlue      = Color(0xFF0B537B)
-private val WtcBlueSoft  = Color(0xFF1A6E9A)
-private val WtcBluePale  = Color(0xFFEEF6FB)
-private val WtcBlueHint  = Color(0xFFD0E8F2)
-private val BubbleOwn    = Color(0xFF0B537B)
-private val BubbleOther  = Color.White
-private val TextPrimary  = Color(0xFF0D2B3E)
-private val TextMuted    = Color(0xFF6E90A0)
-
-// Regex para detectar mensagens com imagem
 private val IMG_REGEX = Regex("""\[img:(images/[^\]]+)]""")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,15 +57,14 @@ fun ChatScreen(
     loggedInUserId: String,
     viewModel: ChatViewModel = viewModel()
 ) {
-    val uiState             by viewModel.uiState.collectAsState()
-    var messageText         by remember { mutableStateOf("") }
-    var replyTo             by remember { mutableStateOf<Message?>(null) }
-    var messageToEdit       by remember { mutableStateOf<Message?>(null) }
-    var messageToDelete     by remember { mutableStateOf<Message?>(null) }
-    val listState           = rememberLazyListState()
-    val snackbarHostState   = remember { SnackbarHostState() }
+    val uiState           by viewModel.uiState.collectAsState()
+    var messageText       by remember { mutableStateOf("") }
+    var replyTo           by remember { mutableStateOf<Message?>(null) }
+    var messageToEdit     by remember { mutableStateOf<Message?>(null) }
+    var messageToDelete   by remember { mutableStateOf<Message?>(null) }
+    val listState         = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // ── Estado de upload de imagem ────────────────────────────────────────────
     val uploadViewModel: ImageUploadViewModel = viewModel()
     var pendingImageUri by remember { mutableStateOf<String?>(null) }
     var pendingImageKey by remember { mutableStateOf<String?>(null) }
@@ -79,40 +79,104 @@ fun ChatScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5FAFD),
+        snackbarHost   = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF0F6FA),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(chatName, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-                },
-                navigationIcon = {
+            // ── TopBar com gradiente ──────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
-                            tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = WtcBlue)
-            )
+
+                    // Avatar inicial
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Color.White.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            chatName.firstOrNull()?.uppercase() ?: "?",
+                            fontSize   = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            chatName,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.White,
+                            fontSize   = 15.sp,
+                            maxLines   = 1
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color(0xFF4CAF50))
+                            )
+                            Text(
+                                if (chatType == "group") "Grupo" else "Atendimento",
+                                fontSize = 11.sp,
+                                color    = Color.White.copy(alpha = 0.70f)
+                            )
+                        }
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF0F6FA))
                 .padding(innerPadding)
         ) {
             when {
                 uiState.isLoading -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
-                uiState.messages.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Chat, contentDescription = null,
-                            tint = WtcBlueHint, modifier = Modifier.size(56.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Nenhuma mensagem ainda.", color = TextMuted, fontSize = 14.sp)
-                        Text("Seja o primeiro a enviar!", color = WtcBlueHint, fontSize = 12.sp)
+                uiState.messages.isEmpty() -> Box(
+                    Modifier.weight(1f).fillMaxWidth(), Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(WtcBluePale),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Chat, contentDescription = null,
+                                tint = WtcBlue, modifier = Modifier.size(36.dp))
+                        }
+                        Text("Nenhuma mensagem ainda.",
+                            color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Seja o primeiro a enviar!",
+                            color = TextMuted, fontSize = 13.sp)
                     }
                 }
                 else -> {
@@ -124,15 +188,13 @@ fun ChatScreen(
                         state = listState
                     ) {
                         items(uiState.messages) { message ->
-                            val isOwn = message.senderId == loggedInUserId
+                            val isOwn    = message.senderId == loggedInUserId
                             val imgMatch = IMG_REGEX.find(message.displayContent)
 
                             if (imgMatch != null) {
-                                // ── Mensagem com imagem ───────────────────────
                                 val objectKey = imgMatch.groupValues[1]
                                 val caption   = message.displayContent
                                     .replace(imgMatch.value, "").trim()
-
                                 var imageUrl by remember(objectKey) { mutableStateOf("") }
                                 LaunchedEffect(objectKey) {
                                     try {
@@ -140,14 +202,12 @@ fun ChatScreen(
                                         if (resp.isSuccessful) imageUrl = resp.body()?.url ?: ""
                                     } catch (_: Exception) {}
                                 }
-
                                 ImageMessageBubble(
                                     imageUrl          = imageUrl,
                                     caption           = caption.ifBlank { null },
                                     isFromCurrentUser = isOwn
                                 )
                             } else {
-                                // ── Mensagem de texto normal ──────────────────
                                 SwipeableMessageBubble(
                                     message           = message,
                                     isFromCurrentUser = isOwn,
@@ -199,7 +259,7 @@ fun ChatScreen(
                 }
             }
 
-            // ── Preview de imagem selecionada ─────────────────────────────────
+            // ── Preview de imagem ─────────────────────────────────────────────
             pendingImageUri?.let { uri ->
                 ImagePreviewBar(
                     imageUrl = uri,
@@ -211,49 +271,59 @@ fun ChatScreen(
                 )
             }
 
-            // ── Barra de input ────────────────────────────────────────────────
+            // ── Barra de input redesenhada ────────────────────────────────────
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                color = Color.White,
-                tonalElevation = 0.dp
+                    .shadow(8.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                color             = Color.White,
+                shape             = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                tonalElevation    = 0.dp
             ) {
                 Row(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                         .navigationBarsPadding(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Botão de imagem
-                    ImagePickerButton(
-                        uploadViewModel = uploadViewModel,
-                        onImageReady = { url, key ->
-                            pendingImageUri = url
-                            pendingImageKey = key
-                        }
-                    )
+                    // Botão imagem
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(WtcBluePale),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ImagePickerButton(
+                            uploadViewModel = uploadViewModel,
+                            onImageReady    = { url, key ->
+                                pendingImageUri = url
+                                pendingImageKey = key
+                            }
+                        )
+                    }
 
                     OutlinedTextField(
-                        value = messageText,
+                        value         = messageText,
                         onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                        placeholder = {
+                        modifier      = Modifier.weight(1f).heightIn(min = 44.dp),
+                        placeholder   = {
                             Text(
                                 if (replyTo != null) "Digite sua resposta..."
                                 else "Mensagem ou / para comandos...",
-                                color = TextMuted.copy(alpha = 0.6f), fontSize = 14.sp
+                                color    = TextMuted.copy(alpha = 0.6f),
+                                fontSize = 14.sp
                             )
                         },
-                        shape = RoundedCornerShape(22.dp),
+                        shape  = RoundedCornerShape(22.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor   = Color(0xFFF0F6FA),
-                            unfocusedContainerColor = Color(0xFFF0F6FA),
+                            focusedContainerColor   = Color(0xFFF5FAFD),
+                            unfocusedContainerColor = Color(0xFFF5FAFD),
                             focusedBorderColor      = WtcBlue,
                             unfocusedBorderColor    = WtcBlueHint
                         )
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Botão enviar
                     FilledIconButton(
@@ -275,8 +345,12 @@ fun ChatScreen(
                             }
                         },
                         enabled = messageText.isNotBlank() || pendingImageKey != null,
-                        shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = WtcBlue)
+                        shape   = RoundedCornerShape(14.dp),
+                        colors  = IconButtonDefaults.filledIconButtonColors(
+                            containerColor         = WtcBlue,
+                            disabledContainerColor = WtcBlueHint
+                        ),
+                        modifier = Modifier.size(46.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar",
                             tint = Color.White, modifier = Modifier.size(20.dp))
@@ -303,10 +377,10 @@ fun ChatScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.editMessage(msg.id, editText); messageToEdit = null },
-                    enabled = editText.isNotBlank() && editText != msg.displayContent,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                    onClick  = { viewModel.editMessage(msg.id, editText); messageToEdit = null },
+                    enabled  = editText.isNotBlank() && editText != msg.displayContent,
+                    shape    = RoundedCornerShape(10.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = WtcBlue)
                 ) { Text("Salvar") }
             },
             dismissButton = {
@@ -373,13 +447,14 @@ fun MessageBubble(
 
         Surface(
             shape = RoundedCornerShape(
-                topStart = 18.dp, topEnd = 18.dp,
-                bottomEnd = if (isFromCurrentUser) 4.dp else 18.dp,
+                topStart    = 18.dp,
+                topEnd      = 18.dp,
+                bottomEnd   = if (isFromCurrentUser) 4.dp else 18.dp,
                 bottomStart = if (isFromCurrentUser) 18.dp else 4.dp
             ),
-            color = if (isImportant) bubbleColor.copy(alpha = 0.85f) else bubbleColor,
-            shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
-            modifier = Modifier.widthIn(max = 280.dp)
+            color            = if (isImportant) bubbleColor.copy(alpha = 0.85f) else bubbleColor,
+            shadowElevation  = if (isFromCurrentUser) 0.dp else 1.dp,
+            modifier         = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
                 if (isImportant) {
@@ -387,7 +462,8 @@ fun MessageBubble(
                         modifier = Modifier.padding(bottom = 4.dp)) {
                         Icon(Icons.Default.Star, contentDescription = null,
                             tint = if (isFromCurrentUser) Color.White.copy(alpha = 0.8f)
-                            else Color(0xFFE8B84B), modifier = Modifier.size(11.dp))
+                            else Color(0xFFE8B84B),
+                            modifier = Modifier.size(11.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Importante", fontSize = 10.sp,
                             color = if (isFromCurrentUser) Color.White.copy(alpha = 0.8f)
@@ -395,13 +471,13 @@ fun MessageBubble(
                     }
                 }
 
-                Text(message.displayContent, fontSize = 14.sp, color = textColor, lineHeight = 20.sp)
+                Text(message.displayContent, fontSize = 14.sp,
+                    color = textColor, lineHeight = 20.sp)
 
-                // ── Hora + status (apenas mensagens próprias) ─────────────
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     if (message.edited == true) {
                         Text("editada", fontSize = 9.sp, color = textColor.copy(alpha = 0.45f))
@@ -419,20 +495,16 @@ fun MessageBubble(
     }
 }
 
-
 private val CircleShape = RoundedCornerShape(50)
 
 private fun formatMessageTime(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
     return try {
-        // Formato do servidor: "2026-03-30T14:43:41.884" ou "2026-03-30T14:43:41"
-        // Formato local (SENDING): "2026-03-30T14:43:41"
         val timePart = when {
             createdAt.contains("T") -> createdAt.substringAfter("T").take(5)
             createdAt.contains(" ") -> createdAt.substringAfter(" ").take(5)
             else                    -> createdAt.take(5)
         }
-        // Garante formato HH:mm com dois dígitos
         val parts = timePart.split(":")
         if (parts.size >= 2) {
             val hour   = parts[0].padStart(2, '0')
