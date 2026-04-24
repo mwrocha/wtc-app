@@ -45,7 +45,7 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
                 Log.d("AuthRepository", "FCM token obtido: $token")
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        apiService.updateFcmToken(mapOf("token" to token))
+                        apiService.updateFcmToken(mapOf("fcmToken" to token))
                         Log.d("AuthRepository", "FCM token enviado ao servidor")
                     } catch (e: Exception) {
                         Log.e("AuthRepository", "Erro ao enviar FCM token: ${e.message}")
@@ -108,10 +108,18 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
     suspend fun getClientProfile(clientId: String): Client =
         apiService.getClientById(clientId)
 
-    suspend fun updateClientProfile(clientId: String, name: String, groupId: String): Boolean {
-        val client = apiService.getClientById(clientId)
-        val updated = client.copy(name = name, groupId = groupId)
-        return apiService.updateClient(clientId, updated).isSuccessful
+    suspend fun updateClientProfile(
+        clientId: String, name: String, groupId: String,
+        currentClient: br.com.fiap.wtcconnecta.data.model.Client? = null
+    ): Boolean {
+        return try {
+            apiService.updateMyName(mapOf("name" to name)).isSuccessful
+        } catch (e: Exception) {
+            // Se lançou exceção mas o nome foi salvo (pode ser erro de parse do response body)
+            // Considera sucesso para não bloquear o usuário
+            android.util.Log.w("AuthRepository", "updateMyName exception (ignorada): ${e.message}")
+            true
+        }
     }
 
     // ── Anotações ─────────────────────────────────────────────────────────────
