@@ -27,7 +27,6 @@ import br.com.fiap.wtcconnecta.ui.screens.operator.HomeOperatorScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.OperatorDashboardScreen
 import br.com.fiap.wtcconnecta.ui.screens.profile.ProfileScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.AttendanceQueueScreen
-import br.com.fiap.wtcconnecta.viewmodel.AttendanceQueueViewModel
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.LoginResult
 import br.com.fiap.wtcconnecta.viewmodel.MainViewModel
@@ -101,14 +100,14 @@ fun NavGraph(
             val session = userSession
             if (session != null && session.role == "operador") {
                 OperatorDashboardScreen(
-                    operatorName = session.name,
-                    onViewClients = { navController.navigate(Routes.OperatorClients.route) },
-                    onNavigateToProfile = { navController.navigate(Routes.OperatorProfile.createRoute(session.id)) },
-                    onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
-                    onNavigateToCampaigns = { navController.navigate(Routes.Campaigns.route) },
-                    onNavigateToKanban = { navController.navigate(Routes.Kanban.route) },
+                    operatorName              = session.name,
+                    onViewClients             = { navController.navigate(Routes.OperatorClients.route) },
+                    onNavigateToProfile       = { navController.navigate(Routes.OperatorProfile.createRoute(session.id)) },
+                    onNavigateToSettings      = { navController.navigate(Routes.Settings.route) },
+                    onNavigateToCampaigns     = { navController.navigate(Routes.Campaigns.route) },
+                    onNavigateToKanban        = { navController.navigate(Routes.Kanban.route) },
                     onNavigateToGroupManagement = { navController.navigate(Routes.GroupManagement.route) },
-                    onNavigateToAudit = { navController.navigate(Routes.Audit.route) },
+                    onNavigateToAudit         = { navController.navigate(Routes.Audit.route) },
                     onNavigateToGroupRequests = { navController.navigate(Routes.GroupRequests.route) },
                     onNavigateToAttendanceQueue = { navController.navigate(Routes.AttendanceQueue.route) },
                     onLogout = {
@@ -126,10 +125,10 @@ fun NavGraph(
             val session = userSession
             if (session != null && session.role == "operador") {
                 HomeOperatorScreen(
-                    currentOperatorId = session.id,
+                    currentOperatorId   = session.id,
                     onNavigateToProfile = { navController.navigate(Routes.OperatorProfile.createRoute(session.id)) },
                     onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
-                    onClientClick = { clientId -> navController.navigate(Routes.ClientDetail.createRoute(clientId)) }
+                    onClientClick       = { clientId -> navController.navigate(Routes.ClientDetail.createRoute(clientId)) }
                 )
             }
         }
@@ -255,14 +254,17 @@ fun NavGraph(
         }
 
         composable(Routes.AttendanceQueue.route) {
-            val session = userSession
             AttendanceQueueScreen(
                 onBack = { navController.popBackStack() },
                 onAssumeAndNavigate = { clientId, _ ->
-                    // Navega direto para o ClientDetailScreen do cliente
+                    // Após assumir → abre ClientDetailScreen do cliente
                     navController.navigate(Routes.ClientDetail.createRoute(clientId)) {
                         popUpTo(Routes.AttendanceQueue.route) { inclusive = true }
                     }
+                },
+                // Atendimento já ativo → abre ClientDetailScreen (chat completo com abas)
+                onNavigateToActive = { clientId, _ ->
+                    navController.navigate(Routes.ClientDetail.createRoute(clientId))
                 }
             )
         }
