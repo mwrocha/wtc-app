@@ -3,6 +3,7 @@ package br.com.fiap.wtcconnecta.ui.screens.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,6 +30,8 @@ import br.com.fiap.wtcconnecta.ui.components.AvatarPicker
 import br.com.fiap.wtcconnecta.viewmodel.ProfileViewModel
 
 private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
@@ -55,10 +61,20 @@ fun ProfileScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
-            snackbarHostState.showSnackbar("Perfil atualizado com sucesso!")
-            viewModel.clearSuccess(); isEditing = false; onProfileUpdated()
+            viewModel.clearSuccess()
+            isEditing = false
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.navigateBack.collect {
+            snackbarHostState.showSnackbar(
+                message  = "Perfil atualizado!",
+                duration = SnackbarDuration.Short
+            )
+            onProfileUpdated()
         }
     }
     LaunchedEffect(uiState.error) {
@@ -81,177 +97,271 @@ fun ProfileScreen(
     val currentDivision = uiState.divisions.firstOrNull { it.id == currentGroup?.divisionId }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Meu Perfil", fontWeight = FontWeight.SemiBold, color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
-                    }
-                },
-                actions = {
-                    if (isEditing) {
-                        IconButton(onClick = { isEditing = false; editedName = uiState.client?.name ?: "" }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancelar", tint = Color.White)
-                        }
-                        IconButton(onClick = { showSaveDialog = true }) {
-                            Icon(Icons.Default.Check, contentDescription = "Salvar", tint = Color.White)
-                        }
-                    } else {
-                        IconButton(onClick = { isEditing = true }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White)
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = WtcBlue)
-            )
-        }
+        snackbarHost   = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
         when {
-            uiState.isLoading && uiState.client == null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            uiState.isLoading && uiState.client == null -> Box(
+                Modifier.fillMaxSize().padding(innerPadding), Alignment.Center
+            ) {
                 CircularProgressIndicator(color = WtcBlue)
             }
             else -> Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF5FAFD))
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // ── Card avatar + nome ────────────────────────────────────
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(4.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+
+                // ── Header Hero ───────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .offset(x = 190.dp, y = (-40).dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.04f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .offset(x = 250.dp, y = 70.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.06f))
+                    )
+
                     Column(
-                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .padding(top = 16.dp, bottom = 32.dp)
                     ) {
-                        AvatarPicker(
-                            avatarUrl      = uiState.avatarUrl,
-                            displayName    = uiState.client?.name ?: "",
-                            isUploading    = uiState.isUploadingAvatar,
-                            size           = 88,
-                            onPickImage    = { uri -> viewModel.uploadAvatar(uri, context) },
-                            onDeleteAvatar = { viewModel.deleteAvatar() }
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        if (isEditing) {
-                            OutlinedTextField(
-                                value = editedName,
-                                onValueChange = { editedName = it },
-                                label = { Text("Nome") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
-                            )
-                        } else {
-                            Text(text = uiState.client?.name ?: "—",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = uiState.client?.email ?: "—",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-
-                // ── Informações da conta ──────────────────────────────────
-                Text("Informações da Conta", style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold, color = WtcBlue)
-
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Email, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("E-mail", style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                                Text(uiState.client?.email ?: "—",
-                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        // Navegação + ações
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick  = onNavigateBack,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Voltar",
+                                    tint     = Color.White,
+                                    modifier = Modifier.size(18.dp))
                             }
-                            TextButton(onClick = { showEmailDialog = true }) {
-                                Text("Alterar", style = MaterialTheme.typography.labelMedium, color = WtcBlue)
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (isEditing) {
+                                    IconButton(
+                                        onClick  = { isEditing = false; editedName = uiState.client?.name ?: "" },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Cancelar",
+                                            tint = Color.White, modifier = Modifier.size(18.dp))
+                                    }
+                                    IconButton(
+                                        onClick  = { showSaveDialog = true },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
+                                    ) {
+                                        Icon(Icons.Default.Check, contentDescription = "Salvar",
+                                            tint = Color.White, modifier = Modifier.size(18.dp))
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick  = { isEditing = true },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar",
+                                            tint = Color.White, modifier = Modifier.size(18.dp))
+                                    }
+                                }
                             }
                         }
-                        HorizontalDivider()
-                        ProfileInfoRow(icon = Icons.Default.Business, label = "Divisão",
-                            value = currentDivision?.name ?: "Não vinculado", isReadOnly = true)
-                        HorizontalDivider()
-                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Group, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Grupo", style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                                Text(currentGroup?.name ?: "Não vinculado",
-                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            }
-                            TextButton(onClick = { showGroupRequestDialog = true }) {
-                                Text("Solicitar troca", style = MaterialTheme.typography.labelMedium, color = WtcBlue)
-                            }
-                        }
-                    }
-                }
 
-                // ── Segurança ─────────────────────────────────────────────
-                Text("Segurança", style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold, color = WtcBlue)
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically) {
+                        // Avatar + nome + email
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = null,
-                                tint = WtcBlue, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .background(Color.White.copy(alpha = 0.20f), CircleShape)
+                                    .padding(3.dp)
+                                    .clip(CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AvatarPicker(
+                                    avatarUrl      = uiState.avatarUrl,
+                                    displayName    = uiState.client?.name ?: "",
+                                    isUploading    = uiState.isUploadingAvatar,
+                                    size           = 70,
+                                    onPickImage    = { uri -> viewModel.uploadAvatar(uri, context) },
+                                    onDeleteAvatar = { viewModel.deleteAvatar() }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
                             Column {
-                                Text("Senha", style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium)
-                                Text("Alterar senha da conta", style = MaterialTheme.typography.labelSmall,
-                                    color = TextMuted)
+                                if (isEditing) {
+                                    OutlinedTextField(
+                                        value         = editedName,
+                                        onValueChange = { editedName = it },
+                                        singleLine    = true,
+                                        placeholder   = { Text("Seu nome", color = Color.White.copy(alpha = 0.5f)) },
+                                        shape         = RoundedCornerShape(12.dp),
+                                        colors        = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor      = Color.White.copy(alpha = 0.7f),
+                                            unfocusedBorderColor    = Color.White.copy(alpha = 0.3f),
+                                            focusedContainerColor   = Color.White.copy(alpha = 0.10f),
+                                            unfocusedContainerColor = Color.White.copy(alpha = 0.08f),
+                                            focusedTextColor        = Color.White,
+                                            unfocusedTextColor      = Color.White,
+                                            cursorColor             = Color.White
+                                        )
+                                    )
+                                } else {
+                                    val nameParts = (uiState.client?.name ?: "").trim().split(" ")
+                                    val firstName  = nameParts.firstOrNull() ?: ""
+                                    val lastName   = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
+
+                                    Text(firstName, fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold, color = Color.White,
+                                        lineHeight = 26.sp)
+                                    if (lastName.isNotBlank()) {
+                                        Text(lastName, fontSize = 14.sp,
+                                            color = Color.White.copy(alpha = 0.75f))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(uiState.client?.email ?: "—",
+                                    fontSize = 12.sp,
+                                    color    = Color.White.copy(alpha = 0.60f))
                             }
                         }
-                        IconButton(onClick = { showPasswordDialog = true }) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = "Alterar senha",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // ── Corpo ─────────────────────────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 24.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+
+                    // ── Informações da conta ──────────────────────────────────
+                    Text("INFORMAÇÕES DA CONTA",
+                        fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = TextMuted, letterSpacing = 1.2.sp)
+
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column {
+                            ProfileInfoItem(
+                                icon       = Icons.Default.Email,
+                                iconBg     = Color(0xFFE8F4FD),
+                                iconTint   = WtcBlue,
+                                label      = "E-mail",
+                                value      = uiState.client?.email ?: "—",
+                                actionText = "Alterar",
+                                onAction   = { showEmailDialog = true }
+                            )
+                            HorizontalDivider(
+                                modifier  = Modifier.padding(horizontal = 16.dp),
+                                color     = Color(0xFFF0F6FA), thickness = 1.dp)
+                            ProfileInfoItem(
+                                icon     = Icons.Default.Business,
+                                iconBg   = Color(0xFFEDF7F2),
+                                iconTint = Color(0xFF1A7A5E),
+                                label    = "Divisão",
+                                value    = currentDivision?.name ?: "Não vinculado",
+                                badge    = "só leitura"
+                            )
+                            HorizontalDivider(
+                                modifier  = Modifier.padding(horizontal = 16.dp),
+                                color     = Color(0xFFF0F6FA), thickness = 1.dp)
+                            ProfileInfoItem(
+                                icon       = Icons.Default.Group,
+                                iconBg     = WtcBlueHint,
+                                iconTint   = WtcBlueDark,
+                                label      = "Grupo",
+                                value      = currentGroup?.name ?: "Não vinculado",
+                                actionText = "Solicitar troca",
+                                onAction   = { showGroupRequestDialog = true }
+                            )
                         }
+                    }
+
+                    // ── Segurança ─────────────────────────────────────────────
+                    Text("SEGURANÇA",
+                        fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = TextMuted, letterSpacing = 1.2.sp)
+
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        ProfileInfoItem(
+                            icon       = Icons.Default.Lock,
+                            iconBg     = Color(0xFFF3EEF8),
+                            iconTint   = Color(0xFF6B3FA0),
+                            label      = "Senha",
+                            value      = "Alterar senha da conta",
+                            actionIcon = Icons.Default.ChevronRight,
+                            onAction   = { showPasswordDialog = true }
+                        )
                     }
                 }
             }
         }
     }
 
+    // ── Dialog confirmar salvamento ───────────────────────────────────────────
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("Confirmar alterações") },
-            text  = { Text("Deseja salvar as alterações no perfil?") },
+            title = { Text("Confirmar alterações", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text  = { Text("Deseja salvar as alterações no perfil?", color = TextMuted) },
             confirmButton = {
-                TextButton(onClick = {
-                    showSaveDialog = false
-                    viewModel.updateClientProfile(
-                        name            = editedName.ifBlank { uiState.client?.name ?: "" },
-                        selectedGroupId = uiState.client?.groupId ?: ""
-                    )
-                }) { Text("Salvar") }
+                Button(
+                    onClick = {
+                        showSaveDialog = false
+                        viewModel.updateClientProfile(
+                            name            = editedName.ifBlank { uiState.client?.name ?: "" },
+                            selectedGroupId = uiState.client?.groupId ?: ""
+                        )
+                    },
+                    shape  = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                ) { Text("Salvar", fontWeight = FontWeight.SemiBold) }
             },
-            dismissButton = { TextButton(onClick = { showSaveDialog = false }) { Text("Cancelar") } }
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancelar", color = TextMuted)
+                }
+            }
         )
     }
 
@@ -288,11 +398,73 @@ fun ProfileScreen(
     }
 }
 
+// ── ProfileInfoItem — linha de informação rica ────────────────────────────────
+
+@Composable
+private fun ProfileInfoItem(
+    icon: ImageVector,
+    iconBg: Color,
+    iconTint: Color,
+    label: String,
+    value: String,
+    actionText: String? = null,
+    actionIcon: ImageVector? = null,
+    badge: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null,
+                tint = iconTint, modifier = Modifier.size(20.dp))
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Medium)
+            Text(value, fontSize = 14.sp, color = TextPrimary,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
+        }
+
+        when {
+            badge != null -> Surface(
+                color = WtcBluePale,
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                Text(badge, fontSize = 10.sp, color = TextMuted,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+            actionText != null -> TextButton(onClick = { onAction?.invoke() }) {
+                Text(actionText, fontSize = 13.sp,
+                    color = WtcBlue, fontWeight = FontWeight.SemiBold)
+            }
+            actionIcon != null -> IconButton(
+                onClick  = { onAction?.invoke() },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(actionIcon, contentDescription = null,
+                    tint = TextMuted, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
 // ── Componentes auxiliares ────────────────────────────────────────────────────
 
 @Composable
 fun ProfileInfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String, value: String, isReadOnly: Boolean = false
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
