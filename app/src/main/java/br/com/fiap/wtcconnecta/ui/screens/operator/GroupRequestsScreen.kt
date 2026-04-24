@@ -31,15 +31,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val WtcBlue     = Color(0xFF0B537B)
-private val WtcBlueSoft = Color(0xFF1A6E9A)
-private val WtcBluePale = Color(0xFFEEF6FB)
-private val WtcBlueHint = Color(0xFFD0E8F2)
-private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val WtcBlue       = Color(0xFF0B537B)
+private val WtcBlueSoft   = Color(0xFF1A6E9A)
+private val WtcBlueDark   = Color(0xFF063D5C)
+private val WtcBluePale   = Color(0xFFEEF6FB)
+private val WtcBlueHint   = Color(0xFFD0E8F2)
+private val TextPrimary   = Color(0xFF0D2B3E)
+private val TextMuted     = Color(0xFF6E90A0)
 private val ColorApproved = Color(0xFF1A7A5E)
 private val ColorRejected = Color(0xFFC62828)
-private val ColorPending  = Color(0x5BF10000)
+private val ColorPending  = Color(0xFFE65100)
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
@@ -71,9 +72,12 @@ class GroupRequestsViewModel : ViewModel() {
             try {
                 RetrofitClient.instance.approveGroupChangeRequest(id)
                 _uiState.update { state ->
-                    state.copy(requests = state.requests.map {
-                        if (it.id == id) it.copy(status = "APPROVED") else it
-                    }, successMessage = "Solicitação aprovada!")
+                    state.copy(
+                        requests = state.requests.map {
+                            if (it.id == id) it.copy(status = "APPROVED") else it
+                        },
+                        successMessage = "Solicitação aprovada!"
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Erro ao aprovar solicitação.") }
@@ -86,9 +90,12 @@ class GroupRequestsViewModel : ViewModel() {
             try {
                 RetrofitClient.instance.rejectGroupChangeRequest(id)
                 _uiState.update { state ->
-                    state.copy(requests = state.requests.map {
-                        if (it.id == id) it.copy(status = "REJECTED") else it
-                    }, successMessage = "Solicitação rejeitada.")
+                    state.copy(
+                        requests = state.requests.map {
+                            if (it.id == id) it.copy(status = "REJECTED") else it
+                        },
+                        successMessage = "Solicitação rejeitada."
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Erro ao rejeitar solicitação.") }
@@ -121,75 +128,135 @@ fun GroupRequestsScreen(
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5FAFD)
+        containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // Header gradiente
+            // ── Header Hero ───────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier.size(180.dp).offset(x = 200.dp, y = (-30).dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier.size(110.dp).offset(x = 260.dp, y = 40.dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.06f))
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 28.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(36.dp)
+                            onClick  = onBack,
+                            modifier = Modifier.size(36.dp)
                                 .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
                                 tint = Color.White, modifier = Modifier.size(18.dp))
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Solicitações de Grupo", fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Aprovar ou rejeitar trocas de grupo",
-                                fontSize = 13.sp, color = Color.White.copy(alpha = 0.72f))
+                        if (pending.isNotEmpty()) {
+                            Surface(color = ColorPending, shape = RoundedCornerShape(20.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Box(modifier = Modifier.size(6.dp).clip(CircleShape)
+                                        .background(Color.White))
+                                    Text("${pending.size} pendente(s)", fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
                         }
                     }
-                    // Badge de pendentes
-                    if (pending.isNotEmpty()) {
-                        Surface(
-                            color = ColorPending,
-                            shape = CircleShape
-                        ) {
-                            Text("${pending.size}", fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold, color = Color.White,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Solicitações de Grupo", fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Aprovar ou rejeitar trocas de grupo",
+                        fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp)
+
+                    if (uiState.requests.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (pending.isNotEmpty()) {
+                                Surface(color = Color.White.copy(alpha = 0.14f),
+                                    shape = RoundedCornerShape(20.dp)) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(7.dp).clip(CircleShape)
+                                            .background(ColorPending))
+                                        Text("${pending.size} pendente(s)", fontSize = 11.sp,
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                            if (reviewed.isNotEmpty()) {
+                                Surface(color = Color.White.copy(alpha = 0.14f),
+                                    shape = RoundedCornerShape(20.dp)) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(7.dp).clip(CircleShape)
+                                            .background(Color.White.copy(alpha = 0.5f)))
+                                        Text("${reviewed.size} revisada(s)", fontSize = 11.sp,
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
 
+            // ── Conteúdo ──────────────────────────────────────────────────────
             when {
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
                 uiState.requests.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(modifier = Modifier.size(72.dp).clip(CircleShape)
-                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
+                                .background(WtcBluePale),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null,
                                 modifier = Modifier.size(36.dp), tint = WtcBlue)
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                         Text("Nenhuma solicitação pendente.", fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text("Tudo em dia por aqui!", fontSize = 13.sp,
-                            color = TextMuted, modifier = Modifier.padding(top = 4.dp))
+                        Text("Tudo em dia por aqui!", fontSize = 13.sp, color = TextMuted)
                     }
                 }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (pending.isNotEmpty()) {
@@ -197,7 +264,7 @@ fun GroupRequestsScreen(
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(bottom = 4.dp)) {
                                 Text("PENDENTES", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                    color = ColorPending, letterSpacing = 1.sp)
+                                    color = ColorPending, letterSpacing = 1.2.sp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(color = ColorPending.copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(20.dp)) {
@@ -216,7 +283,7 @@ fun GroupRequestsScreen(
                     if (reviewed.isNotEmpty()) {
                         item {
                             Text("HISTÓRICO", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                color = TextMuted, letterSpacing = 1.sp,
+                                color = TextMuted, letterSpacing = 1.2.sp,
                                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                         }
                         items(reviewed) { request ->
@@ -238,6 +305,7 @@ fun GroupRequestCard(
     onApprove: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null
 ) {
+    val isPending   = request.status == "PENDING"
     val statusColor = when (request.status) {
         "APPROVED" -> ColorApproved
         "REJECTED" -> ColorRejected
@@ -253,24 +321,26 @@ fun GroupRequestCard(
     Card(
         onClick   = { showSheet = true },
         modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
+        shape     = RoundedCornerShape(20.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Header do card
             Row(modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)) {
-                    Box(modifier = Modifier.size(40.dp).clip(CircleShape)
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp))
+                            .background(WtcBlueHint),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(request.clientName.firstOrNull()?.uppercase() ?: "?",
-                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = WtcBlue)
+                            fontSize = 17.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark)
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(request.clientName, fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold, color = TextPrimary,
@@ -279,79 +349,69 @@ fun GroupRequestCard(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                Surface(color = statusColor.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(20.dp)) {
+                Surface(color = statusColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)) {
                     Text(statusLabel, fontSize = 11.sp, color = statusColor,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider(color = Color(0xFFF0F6FA))
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Troca de grupo
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
+                Surface(color = Color(0xFFF5FAFD), shape = RoundedCornerShape(10.dp)) {
                     Text(request.currentGroupName, fontSize = 12.sp, color = TextMuted,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
-                    modifier = Modifier.size(16.dp).padding(horizontal = 4.dp),
-                    tint = WtcBlueHint)
-                Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
+                    modifier = Modifier.size(20.dp).padding(horizontal = 4.dp), tint = WtcBlueHint)
+                Surface(color = WtcBluePale, shape = RoundedCornerShape(10.dp)) {
                     Text(request.requestedGroupName, fontSize = 12.sp, color = WtcBlue,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
 
             if (request.reason.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(color = Color(0xFFF8FAFB), shape = RoundedCornerShape(8.dp),
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(color = Color(0xFFF5FAFD), shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.Top) {
+                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
                         Icon(Icons.Default.Info, contentDescription = null,
-                            tint = TextMuted, modifier = Modifier.size(13.dp)
-                                .padding(top = 1.dp))
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(request.reason, fontSize = 12.sp, color = TextMuted,
-                            lineHeight = 17.sp)
+                            tint = TextMuted, modifier = Modifier.size(13.dp).padding(top = 1.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(request.reason, fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
                     }
                 }
             }
 
-            // Botões apenas para pendentes
-            if (onApprove != null && onReject != null) {
-                Spacer(modifier = Modifier.height(12.dp))
+            if (isPending && onApprove != null && onReject != null) {
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
-                        onClick = onReject,
-                        modifier = Modifier.weight(1f).height(40.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = ColorRejected),
-                        border = androidx.compose.foundation.BorderStroke(
+                        onClick  = onReject,
+                        modifier = Modifier.weight(1f).height(42.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = ColorRejected),
+                        border   = androidx.compose.foundation.BorderStroke(
                             1.dp, ColorRejected.copy(alpha = 0.5f))
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = null,
-                            modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text("Rejeitar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Button(
-                        onClick = onApprove,
-                        modifier = Modifier.weight(1f).height(40.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ColorApproved)
+                        onClick  = onApprove,
+                        modifier = Modifier.weight(1f).height(42.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = ColorApproved)
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = null,
-                            modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text("Aprovar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -359,7 +419,6 @@ fun GroupRequestCard(
         }
     }
 
-    // ── Bottom Sheet com detalhes completos ───────────────────────────────────
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
@@ -367,26 +426,25 @@ fun GroupRequestCard(
             shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 20.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header
                 Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(48.dp).clip(CircleShape)
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp))
+                            .background(WtcBlueHint),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(request.clientName.firstOrNull()?.uppercase() ?: "?",
-                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlue)
+                            fontSize = 20.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark)
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(request.clientName, fontSize = 15.sp,
                             fontWeight = FontWeight.Bold, color = TextPrimary)
                         Text(request.clientEmail, fontSize = 12.sp, color = TextMuted)
                     }
-                    Spacer(modifier = Modifier.weight(1f))
                     Surface(color = statusColor.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(20.dp)) {
                         Text(statusLabel, fontSize = 11.sp, color = statusColor,
@@ -397,67 +455,62 @@ fun GroupRequestCard(
 
                 HorizontalDivider(color = Color(0xFFF0F6FA))
 
-                // Troca de grupo
                 Text("Mudança solicitada", fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold, color = TextMuted)
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
+                    Surface(color = Color(0xFFF5FAFD), shape = RoundedCornerShape(10.dp)) {
                         Text(request.currentGroupName.ifBlank { "Nenhum" },
                             fontSize = 13.sp, color = TextMuted,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                     }
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null,
                         tint = WtcBlueHint, modifier = Modifier.size(18.dp))
-                    Surface(color = WtcBlue.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
-                        Text(request.requestedGroupName, fontSize = 13.sp,
-                            color = WtcBlue, fontWeight = FontWeight.SemiBold,
+                    Surface(color = WtcBluePale, shape = RoundedCornerShape(10.dp)) {
+                        Text(request.requestedGroupName, fontSize = 13.sp, color = WtcBlue,
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                     }
                 }
 
-                // Motivo completo
                 if (request.reason.isNotBlank()) {
                     Text("Motivo", fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold, color = TextMuted)
-                    Surface(color = Color(0xFFF8FAFB), shape = RoundedCornerShape(10.dp),
+                    Surface(color = Color(0xFFF5FAFD), shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()) {
-                        Row(modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Info, contentDescription = null,
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Info, null,
                                 tint = TextMuted, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(request.reason, fontSize = 13.sp,
                                 color = TextPrimary, lineHeight = 20.sp)
                         }
                     }
                 }
 
-                // Botões no sheet para pendentes
-                if (onApprove != null && onReject != null) {
+                if (isPending && onApprove != null && onReject != null) {
                     HorizontalDivider(color = Color(0xFFF0F6FA))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            onClick = { onReject(); showSheet = false },
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ColorRejected),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, ColorRejected.copy(alpha = 0.5f))
+                            onClick  = { onReject(); showSheet = false },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape    = RoundedCornerShape(12.dp),
+                            colors   = ButtonDefaults.outlinedButtonColors(contentColor = ColorRejected),
+                            border   = androidx.compose.foundation.BorderStroke(
+                                1.dp, ColorRejected.copy(alpha = 0.5f))
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = null,
-                                modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Close, null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text("Rejeitar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Button(
-                            onClick = { onApprove(); showSheet = false },
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = ColorApproved)
+                            onClick  = { onApprove(); showSheet = false },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape    = RoundedCornerShape(12.dp),
+                            colors   = ButtonDefaults.buttonColors(containerColor = ColorApproved)
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = null,
-                                modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Check, null, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text("Aprovar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
