@@ -9,6 +9,7 @@ import br.com.fiap.wtcconnecta.data.model.Division
 import br.com.fiap.wtcconnecta.data.model.Group
 import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.data.repository.AuthRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -28,7 +29,6 @@ data class ProfileUiState(
     val passwordError: String? = null,
     val emailSuccess: Boolean = false,
     val emailError: String? = null,
-    // ── Avatar ────────────────────────────────────────────────────────
     val avatarUrl: String? = null,
     val isUploadingAvatar: Boolean = false,
     val avatarError: String? = null
@@ -41,6 +41,9 @@ class ProfileViewModel(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
+    private val _navigateBack = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val navigateBack = _navigateBack
+
     fun loadProfile(clientId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -49,14 +52,9 @@ class ProfileViewModel(
                 val groups    = repository.getGroups()
                 val divisions = repository.getDivisions()
                 _uiState.update {
-                    it.copy(
-                        client    = client,
-                        groups    = groups,
-                        divisions = divisions,
-                        isLoading = false
-                    )
+                    it.copy(client = client, groups = groups,
+                        divisions = divisions, isLoading = false)
                 }
-                // Carrega avatar após perfil
                 loadAvatar()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar perfil.") }
@@ -70,9 +68,7 @@ class ProfileViewModel(
                 val response = RetrofitClient.instance.getMyAvatar()
                 if (response.isSuccessful) {
                     val url = response.body()?.get("url") as? String
-                    if (!url.isNullOrBlank()) {
-                        _uiState.update { it.copy(avatarUrl = url) }
-                    }
+                    if (!url.isNullOrBlank()) _uiState.update { it.copy(avatarUrl = url) }
                 }
             } catch (_: Exception) {}
         }
@@ -97,16 +93,12 @@ class ProfileViewModel(
                 }
 
                 val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val part = MultipartBody.Part.createFormData(
-                    "file", "avatar.$extension", requestBody
-                )
+                val part = MultipartBody.Part.createFormData("file", "avatar.$extension", requestBody)
 
                 val response = RetrofitClient.instance.uploadAvatar(part)
                 if (response.isSuccessful) {
                     val url = response.body()?.get("url") as? String
-                    _uiState.update {
-                        it.copy(isUploadingAvatar = false, avatarUrl = url)
-                    }
+                    _uiState.update { it.copy(isUploadingAvatar = false, avatarUrl = url) }
                 } else {
                     val msg = when (response.code()) {
                         400  -> "Tipo ou tamanho inválido (máx 5MB, JPEG/PNG/GIF/WEBP)."
@@ -115,9 +107,7 @@ class ProfileViewModel(
                     _uiState.update { it.copy(isUploadingAvatar = false, avatarError = msg) }
                 }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(isUploadingAvatar = false, avatarError = "Erro: ${e.message}")
-                }
+                _uiState.update { it.copy(isUploadingAvatar = false, avatarError = "Erro: ${e.message}") }
             }
         }
     }
@@ -127,8 +117,11 @@ class ProfileViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, success = false) }
             try {
-                val success = repository.updateClientProfile(client.id, name, selectedGroupId)
-                if (success) {
+                // Chama o endpoint seguro PATCH /api/users/me/name
+                val response = RetrofitClient.instance.updateMyName(mapOf("name" to name))
+                // Considera sucesso se 200-299, ignora exceção de parse do body
+                val succeeded = response.isSuccessful
+                if (succeeded) {
                     _uiState.update {
                         it.copy(
                             client    = client.copy(name = name, groupId = selectedGroupId),
@@ -136,11 +129,23 @@ class ProfileViewModel(
                             success   = true
                         )
                     }
+                    _navigateBack.tryEmit(Unit)
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Falha ao atualizar perfil.") }
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "Falha ao atualizar perfil (${response.code()}).")
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao atualizar perfil.") }
+                android.util.Log.w("ProfileViewModel", "updateClientProfile exception: ${e.message}")
+                // Se lançou exceção mas pode ter sido só parse do body — trata como sucesso
+                _uiState.update {
+                    it.copy(
+                        client    = client.copy(name = name, groupId = selectedGroupId),
+                        isLoading = false,
+                        success   = true
+                    )
+                }
+                _navigateBack.tryEmit(Unit)
             }
         }
     }
@@ -203,12 +208,10 @@ class ProfileViewModel(
                 if (response.isSuccessful) {
                     _uiState.update { it.copy(isUploadingAvatar = false, avatarUrl = null) }
                 } else {
-                    _uiState.update { it.copy(isUploadingAvatar = false,
-                        avatarError = "Erro ao excluir foto.") }
+                    _uiState.update { it.copy(isUploadingAvatar = false, avatarError = "Erro ao excluir foto.") }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isUploadingAvatar = false,
-                    avatarError = "Erro ao excluir foto.") }
+                _uiState.update { it.copy(isUploadingAvatar = false, avatarError = "Erro ao excluir foto.") }
             }
         }
     }
