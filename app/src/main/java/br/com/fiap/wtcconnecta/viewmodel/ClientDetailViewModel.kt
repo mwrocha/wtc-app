@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 data class ClientDetailUiState(
     val isLoading: Boolean = true,
     val client: Client? = null,
+    val clientAvatarUrl: String? = null,   // ← presigned URL resolvida
     val notes: List<Note> = emptyList(),
     val messages: List<Message> = emptyList(),
     val campaigns: List<Message> = emptyList(),
@@ -27,7 +28,7 @@ data class ClientDetailUiState(
     val groups: List<Group> = emptyList(),
     val error: String? = null,
     val senderNames: Map<String, String> = emptyMap(),
-    val attendanceClosed: Boolean = false  // ← sinaliza encerramento para a UI
+    val attendanceClosed: Boolean = false
 )
 
 class ClientDetailViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
@@ -87,7 +88,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                 val groups       = groupsDeferred.await() ?: emptyList()
                 val campaigns    = campaignsDeferred.await() ?: emptyList()
 
-                // DEBUG TEMPORÁRIO
                 Log.d("MSG_DEBUG", "Total mensagens: ${conversation.size}")
                 conversation.take(3).forEach { msg ->
                     Log.d("MSG_DEBUG", "id=${msg.id} body=${msg.body} contentRaw=${msg.contentRaw} display=${msg.displayContent}")
@@ -112,9 +112,31 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                         senderNames = it.senderNames + newNames
                     )
                 }
+
+                // ── Busca presigned URL do avatar do cliente ──────────────────
+                // Feito após atualizar o estado principal para não atrasar o carregamento
+                loadClientAvatar(client.avatarKey)
+
             } catch (e: Exception) {
                 Log.e("ClientDetailVM", "Erro ao buscar detalhes: ${e.message}", e)
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar detalhes do cliente.") }
+            }
+        }
+    }
+
+    private fun loadClientAvatar(avatarKey: String?) {
+        if (avatarKey.isNullOrBlank()) return
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getPresignedUrl(avatarKey)
+                if (response.isSuccessful) {
+                    val url = response.body()?.url  // ← .url em vez de .get("url")
+                    if (!url.isNullOrBlank()) {
+                        _uiState.update { it.copy(clientAvatarUrl = url) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("ClientDetailVM", "Falha ao carregar avatar do cliente: ${e.message}")
             }
         }
     }
@@ -199,7 +221,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
             try {
                 val response = RetrofitClient.instance.updateNote(note.id, mapOf("content" to newText))
                 if (response.isSuccessful) {
-                    // Atualiza localmente após confirmação do backend
                     _uiState.update { state ->
                         state.copy(notes = state.notes.map {
                             if (it.id == note.id) it.copy(text = newText) else it
@@ -207,7 +228,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                     }
                 }
             } catch (e: Exception) {
-                // Fallback local se falhar
                 _uiState.update { state ->
                     state.copy(notes = state.notes.map {
                         if (it.id == note.id) it.copy(text = newText) else it
@@ -227,7 +247,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                     }
                 }
             } catch (e: Exception) {
-                // Fallback local se falhar
                 _uiState.update { state ->
                     state.copy(notes = state.notes.filter { it.id != noteId })
                 }
@@ -258,7 +277,6 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    // ── Encerrar atendimento ──────────────────────────────────────────────────
     fun closeAttendance(clientId: String) {
         viewModelScope.launch {
             try {
@@ -266,15 +284,12 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                 val clientEmail    = _uiState.value.client?.email ?: clientId
                 val conversationId = buildConversationId(clientEmail, operatorEmail)
 
-                // 1. Encerra na fila (muda status para CLOSED)
                 RetrofitClient.instance.closeConversation(conversationId)
 
-                // 2. Envia mensagem automática de encerramento ao cliente
                 val farewell = "✅ Atendimento encerrado. Obrigado pelo contato! " +
                         "Caso precise de mais ajuda, estamos à disposição."
                 repository.sendMessage(receiverId = clientEmail, content = farewell)
 
-                // 3. Recarrega mensagens e sinaliza encerramento para a UI
                 val updated = safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
                 _uiState.update { it.copy(messages = updated, attendanceClosed = true) }
 
