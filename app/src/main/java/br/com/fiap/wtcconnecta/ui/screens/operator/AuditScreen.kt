@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
@@ -118,73 +119,106 @@ fun AuditScreen(
     val availableEntities = uiState.logs.map { it.entity }.distinct().sorted()
     val availableActions  = uiState.logs.map { it.action }.distinct().sorted()
 
+
     Scaffold(
         snackbarHost    = { SnackbarHost(snackbarHostState) },
-        containerColor  = Color(0xFFF5FAFD)
+        containerColor  = Color(0xFFF0F6FA)
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // Header gradiente
+            // ── Header Hero ───────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier.size(180.dp).offset(x = 200.dp, y = (-30).dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier.size(110.dp).offset(x = 260.dp, y = 40.dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.06f))
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 24.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(36.dp)
+                            onClick  = onBack,
+                            modifier = Modifier.size(36.dp)
                                 .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
                                 tint = Color.White, modifier = Modifier.size(18.dp))
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Auditoria", fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Histórico de operações realizadas",
-                                fontSize = 13.sp, color = Color.White.copy(alpha = 0.72f))
+                        IconButton(
+                            onClick  = { viewModel.loadLogs() },
+                            modifier = Modifier.size(36.dp)
+                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Atualizar",
+                                tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }
-                    IconButton(
-                        onClick = { viewModel.loadLogs() },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Atualizar",
-                            tint = Color.White, modifier = Modifier.size(18.dp))
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Auditoria", fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Histórico de operações realizadas",
+                        fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp)
+
+                    if (filteredLogs.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Surface(
+                            color = Color.White.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.History, null,
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(12.dp))
+                                Text("${filteredLogs.size} registro(s)",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
 
-            // Painel de filtros
+            // ── Painel de filtros ─────────────────────────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .background(Color(0xFFF0F6FA))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Contador + toggle meus logs
+                // Toggle meus logs
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
-                        Text("${filteredLogs.size} registro(s)",
-                            fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = WtcBlue,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
-                    }
+                    Text("FILTROS", fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = TextMuted, letterSpacing = 1.2.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Apenas meus", fontSize = 12.sp, color = TextMuted)
                         Spacer(modifier = Modifier.width(6.dp))
@@ -198,14 +232,23 @@ fun AuditScreen(
                     }
                 }
 
-                // Filtro por data
+                // Filtro por data — exibe BR (dd-mm-aaaa), filtra em ISO (aaaa-mm-dd)
+                var dateInputBr by remember { mutableStateOf("") }
                 OutlinedTextField(
-                    value = uiState.filterDate ?: "",
+                    value = dateInputBr,
                     onValueChange = { input ->
                         val cleaned = input.filter { it.isDigit() || it == '-' }.take(10)
-                        viewModel.setFilterDate(cleaned.ifBlank { null })
+                        dateInputBr = cleaned
+                        if (cleaned.length == 10) {
+                            val parts = cleaned.split("-")
+                            if (parts.size == 3 && parts[0].length == 2 && parts[1].length == 2 && parts[2].length == 4) {
+                                viewModel.setFilterDate("${parts[2]}-${parts[1]}-${parts[0]}")
+                            }
+                        } else {
+                            viewModel.setFilterDate(null)
+                        }
                     },
-                    placeholder = { Text("Filtrar por data: aaaa-mm-dd",
+                    placeholder = { Text("Filtrar por data: dd-mm-aaaa",
                         color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -213,13 +256,15 @@ fun AuditScreen(
                     shape = RoundedCornerShape(10.dp),
                     leadingIcon = {
                         Icon(Icons.Default.CalendarMonth, contentDescription = null,
-                            tint = if (uiState.filterDate != null) WtcBlue else WtcBlueHint,
+                            tint = if (dateInputBr.isNotBlank()) WtcBlue else WtcBlueHint,
                             modifier = Modifier.size(18.dp))
                     },
                     trailingIcon = {
-                        if (uiState.filterDate != null) {
-                            IconButton(onClick = { viewModel.setFilterDate(null) },
-                                modifier = Modifier.size(20.dp)) {
+                        if (dateInputBr.isNotBlank()) {
+                            IconButton(onClick = {
+                                dateInputBr = ""
+                                viewModel.setFilterDate(null)
+                            }, modifier = Modifier.size(20.dp)) {
                                 Icon(Icons.Default.Clear, contentDescription = "Limpar",
                                     modifier = Modifier.size(16.dp), tint = TextMuted)
                             }
@@ -297,19 +342,26 @@ fun AuditScreen(
                     CircularProgressIndicator(color = WtcBlue)
                 }
                 filteredLogs.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(modifier = Modifier.size(72.dp).clip(CircleShape)
-                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
+                                .background(WtcBluePale),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.History, contentDescription = null,
                                 modifier = Modifier.size(36.dp), tint = WtcBlue)
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Nenhum registro encontrado.", color = TextMuted, fontSize = 14.sp)
+                        Text("Nenhum registro encontrado.", color = TextPrimary,
+                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Tente ajustar os filtros.", color = TextMuted, fontSize = 13.sp)
                     }
                 }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(filteredLogs, key = { it.id }) { log ->
@@ -333,16 +385,16 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
     Card(
         onClick   = { showSheet = true },
         modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(14.dp),
+        shape     = RoundedCornerShape(20.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(modifier = Modifier.padding(14.dp)) {
+        Row(modifier = Modifier.padding(16.dp)) {
             // Ícone semântico — cores mantidas intencionalmente
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(13.dp))
                     .background(actionColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -394,8 +446,13 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                             fontWeight = if (isMe) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null,
-                        tint = WtcBlueHint, modifier = Modifier.size(16.dp))
+                    Box(
+                        modifier = Modifier.size(26.dp).clip(CircleShape).background(WtcBlueHint),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null,
+                            tint = WtcBlueDark, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
         }
