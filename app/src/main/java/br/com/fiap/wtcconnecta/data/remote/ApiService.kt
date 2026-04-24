@@ -157,8 +157,8 @@ interface ApiService {
     @GET("api/users/by-email/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): UserPublicDto
 
-    @POST("api/users/fcm-token")
-    suspend fun updateFcmToken(@Body body: Map<String, String>): Response<Unit>
+    @PATCH("api/users/me/fcm-token")      // ← correto
+    suspend fun updateFcmToken(@Body body: Map<String, String>): Response<Void>
 
     @POST("api/users/change-password")
     suspend fun changePassword(@Body body: Map<String, String>): Response<Unit>
@@ -177,6 +177,9 @@ interface ApiService {
 
     @DELETE("api/users/avatar")
     suspend fun deleteAvatar(): Response<Map<String, String>>
+
+    @PATCH("api/users/me/name")
+    suspend fun updateMyName(@Body body: Map<String, String>): retrofit2.Response<Void>
 
     // ── Divisions & Groups ────────────────────────────────────────────────────
     @GET("api/divisions")
@@ -283,4 +286,10 @@ interface ApiService {
     suspend fun closeConversation(
         @Path("conversationId") conversationId: String
     ): Response<Void>
+
+    @GET("api/conversations/my-active")
+    suspend fun getMyActiveConversations(): List<PendingConversation>
+
+    @GET("api/conversations/my-stats")
+    suspend fun getMyAttendanceStats(): Map<String, Long>
 }
