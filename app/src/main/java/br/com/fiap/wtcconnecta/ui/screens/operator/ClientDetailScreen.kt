@@ -37,9 +37,11 @@ import br.com.fiap.wtcconnecta.ui.components.SwipeableMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.TasksBottomSheet
 import br.com.fiap.wtcconnecta.viewmodel.ClientDetailViewModel
 import br.com.fiap.wtcconnecta.viewmodel.TaskViewModel
+import androidx.compose.foundation.shape.CircleShape
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
@@ -66,21 +68,49 @@ fun ClientDetailScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFF5FAFD),
+        containerColor = Color(0xFFF0F6FA),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(uiState.client?.name ?: "Detalhes do Cliente",
-                        fontWeight = FontWeight.SemiBold, color = Color.White)
-                },
-                navigationIcon = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
+            ) {
+                Box(
+                    modifier = Modifier.size(160.dp).offset(x = 210.dp, y = (-30).dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Voltar", tint = Color.White)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = WtcBlue)
-            )
+                    // Avatar inicial + nome
+                    Box(
+                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            (uiState.client?.name ?: "?").firstOrNull()?.uppercase() ?: "?",
+                            fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(uiState.client?.name ?: "Detalhes do Cliente",
+                            fontWeight = FontWeight.Bold, color = Color.White,
+                            fontSize = 20.sp, maxLines = 1)
+                        Text(uiState.client?.email ?: "",
+                            fontSize = 15.sp, color = Color.White.copy(alpha = 0.65f),
+                            maxLines = 1)
+                    }
+                }
+            }
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -191,14 +221,14 @@ fun ClientProfileSection(
     ) {
         // Card cliente
         item {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(2.dp)) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+                        .background(WtcBlueHint), contentAlignment = Alignment.Center) {
                         Text(clientName.firstOrNull()?.uppercase() ?: "?",
-                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlue)
+                            fontSize = 19.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark)
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
@@ -384,7 +414,7 @@ fun NotesSection(
     onDeleteRequest: (Note) -> Unit, onStartEdit: (Note) -> Unit
 ) {
     var newNoteText by remember { mutableStateOf("") }
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF5FAFD))) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF0F6FA))) {
         LazyColumn(
             modifier = Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -709,11 +739,11 @@ fun DeleteConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 fun NoteItem(note: Note, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(note.text, fontSize = 14.sp, color = TextPrimary, lineHeight = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
@@ -742,10 +772,19 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.Default.Campaign, contentDescription = null,
-                tint = WtcBlueHint, modifier = Modifier.size(56.dp))
+            Box(
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
+                    .background(WtcBluePale),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Campaign, contentDescription = null,
+                    tint = WtcBlue, modifier = Modifier.size(36.dp))
+            }
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Nenhuma campanha recebida", fontSize = 14.sp, color = TextMuted)
+            Text("Nenhuma campanha recebida", fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text("Este cliente ainda não recebeu campanhas.", fontSize = 13.sp,
+                color = TextMuted, modifier = Modifier.padding(top = 4.dp))
         }
         return
     }
@@ -756,25 +795,25 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text("${campaigns.size} campanha(s) recebida(s)",
+            Text("CAMPANHAS — ${campaigns.size}",
                 fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                color = TextMuted, letterSpacing = 0.5.sp,
+                color = TextMuted, letterSpacing = 1.2.sp,
                 modifier = Modifier.padding(bottom = 4.dp))
         }
         items(campaigns) { campaign ->
             Card(
                 onClick = { selectedCampaign = campaign },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
                             .background(WtcBluePale),
                         contentAlignment = Alignment.Center
                     ) {
@@ -802,8 +841,13 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null,
-                        tint = WtcBlueHint, modifier = Modifier.size(18.dp))
+                    Box(
+                        modifier = Modifier.size(28.dp).clip(CircleShape).background(WtcBlueHint),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = null,
+                            tint = WtcBlueDark, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
         }
