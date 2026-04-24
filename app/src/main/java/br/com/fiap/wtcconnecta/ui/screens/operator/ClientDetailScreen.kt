@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -37,7 +39,7 @@ import br.com.fiap.wtcconnecta.ui.components.SwipeableMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.TasksBottomSheet
 import br.com.fiap.wtcconnecta.viewmodel.ClientDetailViewModel
 import br.com.fiap.wtcconnecta.viewmodel.TaskViewModel
-import androidx.compose.foundation.shape.CircleShape
+import coil.compose.AsyncImage
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
@@ -89,17 +91,35 @@ fun ClientDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Voltar", tint = Color.White)
                     }
-                    // Avatar inicial + nome
+
+                    // ── Avatar: foto se tiver, inicial se não tiver ───────────
                     Box(
-                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            (uiState.client?.name ?: "?").firstOrNull()?.uppercase() ?: "?",
-                            fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White
-                        )
+                        val avatarUrl = uiState.clientAvatarUrl
+                        if (!avatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model              = avatarUrl,
+                                contentDescription = "Avatar de ${uiState.client?.name}",
+                                contentScale       = ContentScale.Crop,
+                                modifier           = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Text(
+                                (uiState.client?.name ?: "?").firstOrNull()?.uppercase() ?: "?",
+                                fontSize   = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color      = Color.White
+                            )
+                        }
                     }
+
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(uiState.client?.name ?: "Detalhes do Cliente",
@@ -119,7 +139,6 @@ fun ClientDetailScreen(
                     CircularProgressIndicator(color = WtcBlue)
                 }
                 uiState.client != null -> {
-                    // TabRow customizado
                     TabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor   = Color.White,
@@ -159,16 +178,17 @@ fun ClientDetailScreen(
                             taskViewModel = taskViewModel,
                             getSenderName = { viewModel.getSenderName(it) },
                             onCloseAttendance = { viewModel.closeAttendance(clientId) })
-                        3 -> ClientCampaignsSection(campaigns = uiState.campaigns)
-                        2 -> ClientProfileSection(divisions = uiState.divisions,
-                            groups = uiState.groups,
+                        2 -> ClientProfileSection(
+                            divisions         = uiState.divisions,
+                            groups            = uiState.groups,
                             currentDivisionId = uiState.client?.divisionId,
                             currentGroupId    = uiState.client?.groupId,
                             currentTags       = uiState.client?.tags.orEmpty(),
-                            clientName  = uiState.client?.name ?: "",
-                            clientEmail = uiState.client?.email ?: "",
+                            clientName        = uiState.client?.name ?: "",
+                            clientEmail       = uiState.client?.email ?: "",
                             onSave = { divisionId, groupId, tags ->
                                 viewModel.updateClientProfile(divisionId, groupId, tags) })
+                        3 -> ClientCampaignsSection(campaigns = uiState.campaigns)
                     }
                 }
                 uiState.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -219,7 +239,6 @@ fun ClientProfileSection(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Card cliente
         item {
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -232,14 +251,14 @@ fun ClientProfileSection(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(clientName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text(clientName, fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         Text(clientEmail, fontSize = 12.sp, color = TextMuted)
                     }
                 }
             }
         }
 
-        // Divisão
         item {
             Text("Divisão", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 color = TextPrimary, modifier = Modifier.padding(bottom = 6.dp))
@@ -266,7 +285,6 @@ fun ClientProfileSection(
             }
         }
 
-        // Grupo
         item {
             Text("Grupo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 color = TextPrimary, modifier = Modifier.padding(bottom = 6.dp))
@@ -299,12 +317,9 @@ fun ClientProfileSection(
             }
         }
 
-        // Tags
         item {
             Text("Tags", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 color = TextPrimary, modifier = Modifier.padding(bottom = 6.dp))
-
-            // Chips das tags existentes
             if (tags.isNotEmpty()) {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -312,10 +327,7 @@ fun ClientProfileSection(
                     verticalArrangement   = Arrangement.spacedBy(6.dp)
                 ) {
                     tags.forEach { tag ->
-                        Surface(
-                            color = WtcBlue,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
+                        Surface(color = WtcBlue, shape = RoundedCornerShape(20.dp)) {
                             Row(
                                 modifier = Modifier.padding(start = 10.dp, end = 4.dp,
                                     top = 4.dp, bottom = 4.dp),
@@ -337,8 +349,6 @@ fun ClientProfileSection(
                     }
                 }
             }
-
-            // Input para nova tag
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -359,22 +369,17 @@ fun ClientProfileSection(
                     onClick = {
                         val t = tagInput.trim()
                         if (t.isNotBlank() && !tags.contains(t)) {
-                            tags = (tags + t).toMutableList()
-                            saved = false
+                            tags = (tags + t).toMutableList(); saved = false
                         }
                         tagInput = ""
                     },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(WtcBlue, RoundedCornerShape(12.dp))
+                    modifier = Modifier.size(48.dp).background(WtcBlue, RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar tag",
-                        tint = Color.White)
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar tag", tint = Color.White)
                 }
             }
         }
 
-        // Salvar
         item {
             if (saved) {
                 Row(verticalAlignment = Alignment.CenterVertically,
@@ -388,12 +393,10 @@ fun ClientProfileSection(
             }
             Button(
                 onClick = {
-                    // Usa os IDs atuais do cliente como fallback se não alterou divisão/grupo
                     val divId = selectedDivision?.id ?: currentDivisionId ?: ""
                     val grpId = selectedGroup?.id ?: currentGroupId ?: ""
                     onSave(divId, grpId, tags.toList()); saved = true
                 },
-                enabled = true,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
@@ -440,8 +443,9 @@ fun NotesSection(
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
-                    cursorColor = WtcBlue,
+                    focusedBorderColor      = WtcBlue,
+                    unfocusedBorderColor    = WtcBlueHint,
+                    cursorColor             = WtcBlue,
                     focusedContainerColor   = WtcBluePale.copy(alpha = 0.4f),
                     unfocusedContainerColor = Color(0xFFFAFCFE)
                 )
@@ -460,16 +464,14 @@ fun ChatSection(
     getSenderName: (String) -> String,
     onCloseAttendance: () -> Unit = {}
 ) {
-    var messageText by remember { mutableStateOf("") }
-    var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
-    var replyTo     by remember { mutableStateOf<Message?>(null) }
-    var showTasks   by remember { mutableStateOf(false) }
+    var messageText     by remember { mutableStateOf("") }
+    var suggestions     by remember { mutableStateOf<List<String>>(emptyList()) }
+    var replyTo         by remember { mutableStateOf<Message?>(null) }
+    var showTasks       by remember { mutableStateOf(false) }
     var showCloseDialog by remember { mutableStateOf(false) }
-    val taskCount   = MessageActionsState.tasks.size
+    val taskCount = MessageActionsState.tasks.size
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF0F6FA))) {
-
-        // ── Barra superior: tarefas + botão encerrar ──────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -485,10 +487,9 @@ fun ChatSection(
             } else {
                 Spacer(modifier = Modifier.weight(1f))
             }
-
             TextButton(
                 onClick = { showCloseDialog = true },
-                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE65100))
+                colors  = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE65100))
             ) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null,
                     modifier = Modifier.size(16.dp))
@@ -521,7 +522,6 @@ fun ChatSection(
             }
         }
 
-        // Reply quote
         replyTo?.let { reply ->
             Surface(modifier = Modifier.fillMaxWidth(), color = WtcBluePale) {
                 Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -530,8 +530,10 @@ fun ChatSection(
                         color = WtcBlue, shape = RoundedCornerShape(2.dp)) {}
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Respondendo", fontSize = 11.sp, color = WtcBlue, fontWeight = FontWeight.SemiBold)
-                        Text(reply.displayContent, fontSize = 12.sp, color = TextMuted, maxLines = 1)
+                        Text("Respondendo", fontSize = 11.sp,
+                            color = WtcBlue, fontWeight = FontWeight.SemiBold)
+                        Text(reply.displayContent, fontSize = 12.sp,
+                            color = TextMuted, maxLines = 1)
                     }
                     IconButton(onClick = { replyTo = null }, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.Close, contentDescription = null,
@@ -542,9 +544,10 @@ fun ChatSection(
         }
 
         AnimatedVisibility(suggestions.isNotEmpty()) {
-            LazyRow(modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(suggestions) { command ->
                     AssistChip(
                         onClick = { messageText = command; suggestions = emptyList() },
@@ -558,7 +561,6 @@ fun ChatSection(
             }
         }
 
-        // Input
         Surface(color = Color.White, shadowElevation = 4.dp) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
@@ -566,7 +568,10 @@ fun ChatSection(
             ) {
                 OutlinedTextField(
                     value = messageText,
-                    onValueChange = { messageText = it; suggestions = viewModel.getCommandSuggestions(it) },
+                    onValueChange = {
+                        messageText = it
+                        suggestions = viewModel.getCommandSuggestions(it)
+                    },
                     modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                     placeholder = { Text("Mensagem ou / para comandos...",
                         color = TextMuted.copy(alpha = 0.6f), fontSize = 13.sp) },
@@ -586,7 +591,7 @@ fun ChatSection(
                             messageText = ""; suggestions = emptyList()
                         }
                     },
-                    shape = RoundedCornerShape(50),
+                    shape  = RoundedCornerShape(50),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = WtcBlue)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar",
@@ -598,31 +603,25 @@ fun ChatSection(
 
     if (showTasks) TasksBottomSheet(onDismiss = { showTasks = false })
 
-    // ── Dialog de confirmação de encerramento ─────────────────────────────────
     if (showCloseDialog) {
         AlertDialog(
             onDismissRequest = { showCloseDialog = false },
-            title = {
-                Text("Encerrar atendimento?",
-                    fontWeight = FontWeight.Bold, color = Color(0xFF0D2B3E))
-            },
-            text = {
-                Text(
-                    "O cliente receberá uma mensagem de encerramento e o atendimento " +
-                            "voltará para a fila caso entre em contato novamente.",
-                    color = Color(0xFF6E90A0), fontSize = 13.sp
-                )
-            },
+            title = { Text("Encerrar atendimento?",
+                fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text  = { Text(
+                "O cliente receberá uma mensagem de encerramento e o atendimento " +
+                        "voltará para a fila caso entre em contato novamente.",
+                color = TextMuted, fontSize = 13.sp) },
             confirmButton = {
                 Button(
                     onClick = { showCloseDialog = false; onCloseAttendance() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B537B)),
-                    shape = RoundedCornerShape(10.dp)
+                    colors  = ButtonDefaults.buttonColors(containerColor = WtcBlue),
+                    shape   = RoundedCornerShape(10.dp)
                 ) { Text("Encerrar", fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showCloseDialog = false }) {
-                    Text("Cancelar", color = Color(0xFF6E90A0))
+                    Text("Cancelar", color = TextMuted)
                 }
             }
         )
@@ -649,13 +648,14 @@ fun MessageBubble(
         Surface(
             color = bubbleColor,
             shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp,
-                bottomEnd = if (isFromCurrentUser) 4.dp else 18.dp,
+                bottomEnd   = if (isFromCurrentUser) 4.dp else 18.dp,
                 bottomStart = if (isFromCurrentUser) 18.dp else 4.dp),
             shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
-                Text(message.displayContent, fontSize = 14.sp, color = textColor, lineHeight = 20.sp)
+                Text(message.displayContent, fontSize = 14.sp,
+                    color = textColor, lineHeight = 20.sp)
                 Text(formatTime(message.createdAt), fontSize = 10.sp,
                     color = textColor.copy(alpha = 0.55f),
                     textAlign = TextAlign.End,
@@ -668,12 +668,14 @@ fun MessageBubble(
 @Composable
 fun ClientShortcutChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String, onClick: () -> Unit
+    label: String,
+    onClick: () -> Unit
 ) {
     Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = WtcBluePale) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = WtcBlue, modifier = Modifier.size(14.dp))
+            Icon(icon, contentDescription = null,
+                tint = WtcBlue, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(label, fontSize = 12.sp, color = WtcBlue)
         }
@@ -689,9 +691,8 @@ private fun formatTime(createdAt: String?): String {
 private fun formatCampaignDate(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
     return try {
-        // Formato ISO: 2026-04-08T00:44:54.587
-        val date = createdAt.take(10)          // 2026-04-08
-        val time = createdAt.drop(11).take(5)  // 00:44
+        val date  = createdAt.take(10)
+        val time  = createdAt.drop(11).take(5)
         val parts = date.split("-")
         if (parts.size == 3) "${parts[2]}/${parts[1]}/${parts[0]} às $time"
         else "$date às $time"
@@ -712,11 +713,12 @@ fun EditNoteDialog(note: Note, onDismiss: () -> Unit, onConfirm: (String) -> Uni
                     focusedBorderColor = WtcBlue, cursorColor = WtcBlue))
         },
         confirmButton = {
-            Button(onClick = { onConfirm(updatedText) },
-                shape = RoundedCornerShape(10.dp),
+            Button(onClick = { onConfirm(updatedText) }, shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) { Text("Salvar") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
 
@@ -728,19 +730,22 @@ fun DeleteConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
         text  = { Text("Tem certeza que deseja excluir esta anotação?", color = TextMuted) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Excluir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                Text("Excluir", color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
 
 @Composable
 fun NoteItem(note: Note, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -759,6 +764,7 @@ fun NoteItem(note: Note, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
         }
     }
 }
+
 // ── Aba Campanhas ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -767,16 +773,11 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
     var selectedCampaign by remember { mutableStateOf<Message?>(null) }
 
     if (campaigns.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
+        Column(modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
-                    .background(WtcBluePale),
-                contentAlignment = Alignment.Center
-            ) {
+            verticalArrangement = Arrangement.Center) {
+            Box(modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
+                .background(WtcBluePale), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Campaign, contentDescription = null,
                     tint = WtcBlue, modifier = Modifier.size(36.dp))
             }
@@ -795,56 +796,38 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
     ) {
         item {
-            Text("CAMPANHAS — ${campaigns.size}",
-                fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                color = TextMuted, letterSpacing = 1.2.sp,
+            Text("CAMPANHAS — ${campaigns.size}", fontSize = 11.sp,
+                fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp,
                 modifier = Modifier.padding(bottom = 4.dp))
         }
         items(campaigns) { campaign ->
-            Card(
-                onClick = { selectedCampaign = campaign },
-                modifier = Modifier.fillMaxWidth(),
+            Card(onClick = { selectedCampaign = campaign }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
-                            .background(WtcBluePale),
-                        contentAlignment = Alignment.Center
-                    ) {
+                elevation = CardDefaults.cardElevation(2.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
+                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Campaign, contentDescription = null,
                             tint = WtcBlue, modifier = Modifier.size(22.dp))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            campaign.title?.ifBlank { "Campanha WTC" } ?: "Campanha WTC",
+                        Text(campaign.title?.ifBlank { "Campanha WTC" } ?: "Campanha WTC",
                             fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                             color = TextPrimary, maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                        Text(
-                            campaign.body?.ifBlank { "" } ?: "",
-                            fontSize = 12.sp, color = TextMuted,
-                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text(campaign.body?.ifBlank { "" } ?: "", fontSize = 12.sp,
+                            color = TextMuted, maxLines = 2,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                        Text(
-                            formatCampaignDate(campaign.createdAt),
-                            fontSize = 11.sp, color = TextMuted.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+                            modifier = Modifier.padding(top = 2.dp))
+                        Text(formatCampaignDate(campaign.createdAt), fontSize = 11.sp,
+                            color = TextMuted.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 4.dp))
                     }
-                    Box(
-                        modifier = Modifier.size(28.dp).clip(CircleShape).background(WtcBlueHint),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(WtcBlueHint),
+                        contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.ChevronRight, contentDescription = null,
                             tint = WtcBlueDark, modifier = Modifier.size(14.dp))
                     }
@@ -853,18 +836,15 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
         }
     }
 
-    // ── Bottom Sheet com detalhes da campanha ─────────────────────────────────
     selectedCampaign?.let { campaign ->
         ModalBottomSheet(
             onDismissRequest = { selectedCampaign = null },
-            containerColor = Color(0xFFF5FAFD),
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            containerColor   = Color(0xFFF5FAFD),
+            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Detalhes da campanha", fontSize = 16.sp,
