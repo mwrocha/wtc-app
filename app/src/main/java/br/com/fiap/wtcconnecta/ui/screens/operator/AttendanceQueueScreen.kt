@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.data.remote.PendingConversation
 import br.com.fiap.wtcconnecta.viewmodel.AttendanceQueueViewModel
+import br.com.fiap.wtcconnecta.viewmodel.ClosedSession
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
@@ -34,6 +35,7 @@ private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
 private val ColorActive = Color(0xFF1A7A5E)
 private val ColorQueue  = Color(0xFFE65100)
+private val ColorClosed = Color(0xFF5C6BC0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +43,7 @@ fun AttendanceQueueScreen(
     onBack: () -> Unit,
     onAssumeAndNavigate: (clientId: String, clientName: String) -> Unit,
     onNavigateToActive: (clientId: String, clientName: String) -> Unit = { _, _ -> },
+    onNavigateToClosed: (clientId: String) -> Unit = { _ -> },
     viewModel: AttendanceQueueViewModel = viewModel()
 ) {
     val uiState           by viewModel.uiState.collectAsState()
@@ -63,6 +66,7 @@ fun AttendanceQueueScreen(
 
     val totalActive  = uiState.activeConversations.size
     val totalPending = uiState.pendingConversations.size
+    val totalClosed  = uiState.closedSessions.size
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
@@ -105,7 +109,7 @@ fun AttendanceQueueScreen(
                     Text("Atendimentos", fontSize = 24.sp,
                         fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Gerencie seus atendimentos em andamento",
+                    Text("Gerencie seus atendimentos",
                         fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f))
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -113,50 +117,24 @@ fun AttendanceQueueScreen(
                     // Pills de contagem
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (totalActive > 0) {
-                            Surface(
-                                color = Color.White.copy(alpha = 0.14f),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape)
-                                        .background(Color(0xFF4CAF50)))
-                                    Text("$totalActive em andamento",
-                                        fontSize = 11.sp, color = Color.White.copy(alpha = 0.90f),
-                                        fontWeight = FontWeight.Medium)
-                                }
-                            }
+                            QueuePill("$totalActive ativo(s)", Color(0xFF4CAF50))
                         }
                         if (totalPending > 0) {
-                            Surface(
-                                color = Color.White.copy(alpha = 0.14f),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    Box(modifier = Modifier.size(7.dp).clip(CircleShape)
-                                        .background(ColorQueue))
-                                    Text("$totalPending aguardando",
-                                        fontSize = 11.sp, color = Color.White.copy(alpha = 0.90f),
-                                        fontWeight = FontWeight.Medium)
-                                }
-                            }
+                            QueuePill("$totalPending aguardando", ColorQueue)
+                        }
+                        if (totalClosed > 0) {
+                            QueuePill("$totalClosed encerrado(s)", ColorClosed)
                         }
                     }
                 }
             }
 
+            // ── Conteúdo ──────────────────────────────────────────────────────
             when {
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
-                totalActive == 0 && totalPending == 0 -> Box(
+                totalActive == 0 && totalPending == 0 && totalClosed == 0 -> Box(
                     Modifier.fillMaxSize(), Alignment.Center
                 ) {
                     Column(
@@ -173,7 +151,7 @@ fun AttendanceQueueScreen(
                         }
                         Text("Tudo em dia!", fontSize = 16.sp,
                             fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text("Nenhum atendimento pendente ou ativo.",
+                        Text("Nenhum atendimento registrado.",
                             fontSize = 13.sp, color = TextMuted)
                     }
                 }
@@ -183,26 +161,10 @@ fun AttendanceQueueScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
 
-                    // ── Seção: Meus Atendimentos ──────────────────────────────
+                    // ── Seção: Meus Atendimentos Ativos ───────────────────────
                     if (totalActive > 0) {
                         item {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            ) {
-                                Text("MEUS ATENDIMENTOS", fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ColorActive, letterSpacing = 1.2.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = ColorActive.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ) {
-                                    Text("$totalActive", fontSize = 10.sp,
-                                        color = ColorActive, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                                }
-                            }
+                            SectionHeader("MEUS ATENDIMENTOS", totalActive, ColorActive)
                         }
                         items(uiState.activeConversations) { conv ->
                             ActiveConversationCard(
@@ -215,26 +177,12 @@ fun AttendanceQueueScreen(
                     // ── Seção: Fila de Espera ─────────────────────────────────
                     if (totalPending > 0) {
                         item {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(
-                                    top = if (totalActive > 0) 12.dp else 0.dp,
-                                    bottom = 4.dp
-                                )
-                            ) {
-                                Text("FILA DE ESPERA", fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ColorQueue, letterSpacing = 1.2.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = ColorQueue.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(20.dp)
-                                ) {
-                                    Text("$totalPending", fontSize = 10.sp,
-                                        color = ColorQueue, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                                }
-                            }
+                            SectionHeader(
+                                label   = "FILA DE ESPERA",
+                                count   = totalPending,
+                                color   = ColorQueue,
+                                topPad  = if (totalActive > 0) 12.dp else 0.dp
+                            )
                         }
                         items(uiState.pendingConversations) { conv ->
                             PendingConversationCard(
@@ -244,13 +192,69 @@ fun AttendanceQueueScreen(
                             )
                         }
                     }
+
+                    // ── Seção: Encerrados (últimos 30) ────────────────────────
+                    if (totalClosed > 0) {
+                        item {
+                            SectionHeader(
+                                label  = "ENCERRADOS",
+                                count  = totalClosed,
+                                color  = ColorClosed,
+                                topPad = if (totalActive > 0 || totalPending > 0) 12.dp else 0.dp
+                            )
+                        }
+                        items(uiState.closedSessions) { session ->
+                            ClosedSessionCard(
+                                session = session,
+                                onClick = { onNavigateToClosed(session.clientId) }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// ── Card: Atendimento ativo (IN_PROGRESS) ─────────────────────────────────────
+// ── Componentes auxiliares ────────────────────────────────────────────────────
+
+@Composable
+private fun QueuePill(label: String, accent: Color) {
+    Surface(color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(accent))
+            Text(label, fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    label: String,
+    count: Int,
+    color: Color,
+    topPad: androidx.compose.ui.unit.Dp = 0.dp
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = topPad, bottom = 4.dp)
+    ) {
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            color = color, letterSpacing = 1.2.sp)
+        Spacer(modifier = Modifier.width(8.dp))
+        Surface(color = color.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)) {
+            Text("$count", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+        }
+    }
+}
+
+// ── Card: Atendimento ativo ───────────────────────────────────────────────────
 
 @Composable
 fun ActiveConversationCard(
@@ -268,16 +272,13 @@ fun ActiveConversationCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
             Box(
                 modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
                     .background(Color(0xFFEDF7F2)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    conversation.clientName.firstOrNull()?.uppercase() ?: "?",
-                    fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ColorActive
-                )
+                Text(conversation.clientName.firstOrNull()?.uppercase() ?: "?",
+                    fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ColorActive)
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -285,27 +286,20 @@ fun ActiveConversationCard(
                     fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 Text(conversation.clientEmail, fontSize = 11.sp, color = TextMuted)
                 if (conversation.lastMessagePreview.isNotBlank()) {
-                    Text(
-                        conversation.lastMessagePreview,
-                        fontSize = 12.sp, color = TextMuted,
+                    Text(conversation.lastMessagePreview, fontSize = 12.sp, color = TextMuted,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 3.dp)
-                    )
+                        modifier = Modifier.padding(top = 3.dp))
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Surface(
-                    color = ColorActive.copy(alpha = 0.10f),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
+                Surface(color = ColorActive.copy(alpha = 0.10f), shape = RoundedCornerShape(20.dp)) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(modifier = Modifier.size(6.dp).clip(CircleShape)
-                            .background(ColorActive))
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ColorActive))
                         Text("Ativo", fontSize = 10.sp,
                             color = ColorActive, fontWeight = FontWeight.SemiBold)
                     }
@@ -323,7 +317,7 @@ fun ActiveConversationCard(
     }
 }
 
-// ── Card: Conversa pendente (OPEN) ────────────────────────────────────────────
+// ── Card: Conversa pendente ───────────────────────────────────────────────────
 
 @Composable
 fun PendingConversationCard(
@@ -344,10 +338,8 @@ fun PendingConversationCard(
                         .background(WtcBlueHint),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        conversation.clientName.firstOrNull()?.uppercase() ?: "?",
-                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark
-                    )
+                    Text(conversation.clientName.firstOrNull()?.uppercase() ?: "?",
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark)
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -355,17 +347,13 @@ fun PendingConversationCard(
                         fontWeight = FontWeight.SemiBold, color = TextPrimary)
                     Text(conversation.clientEmail, fontSize = 11.sp, color = TextMuted)
                 }
-                Surface(
-                    color = ColorQueue.copy(alpha = 0.10f),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
+                Surface(color = ColorQueue.copy(alpha = 0.10f), shape = RoundedCornerShape(20.dp)) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(modifier = Modifier.size(6.dp).clip(CircleShape)
-                            .background(ColorQueue))
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ColorQueue))
                         Text("Aguardando", fontSize = 10.sp,
                             color = ColorQueue, fontWeight = FontWeight.SemiBold)
                     }
@@ -374,18 +362,12 @@ fun PendingConversationCard(
 
             if (conversation.lastMessagePreview.isNotBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    color    = Color(0xFFF5FAFD),
-                    shape    = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "\"${conversation.lastMessagePreview}\"",
-                        fontSize = 12.sp, color = TextMuted,
-                        fontStyle = FontStyle.Italic,
+                Surface(color = Color(0xFFF5FAFD), shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("\"${conversation.lastMessagePreview}\"",
+                        fontSize = 12.sp, color = TextMuted, fontStyle = FontStyle.Italic,
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    )
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                 }
             }
 
@@ -423,11 +405,76 @@ fun PendingConversationCard(
     }
 }
 
+// ── Card: Sessão encerrada ────────────────────────────────────────────────────
+
+@Composable
+fun ClosedSessionCard(
+    session: ClosedSession,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick   = onClick,
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(13.dp))
+                    .background(Color(0xFFEEF0FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(session.clientName.firstOrNull()?.uppercase() ?: "?",
+                    fontSize = 17.sp, fontWeight = FontWeight.Bold, color = ColorClosed)
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(session.clientName, fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(session.clientEmail, fontSize = 11.sp, color = TextMuted)
+                if (session.closedAt.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null,
+                            tint = ColorClosed.copy(alpha = 0.6f),
+                            modifier = Modifier.size(11.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Encerrado: ${formatQueueDateTime(session.closedAt)}",
+                            fontSize = 11.sp, color = TextMuted)
+                    }
+                }
+            }
+            Surface(color = ColorClosed.copy(alpha = 0.10f), shape = RoundedCornerShape(20.dp)) {
+                Text("Encerrado", fontSize = 10.sp, color = ColorClosed,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+            }
+        }
+    }
+}
+
+// ── Helpers de data ───────────────────────────────────────────────────────────
+
 private fun formatQueueTime(dateStr: String): String {
     return try {
         val timePart = dateStr.substringAfter("T").take(5)
         val parts    = timePart.split(":")
         if (parts.size >= 2) "${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}"
         else timePart
+    } catch (_: Exception) { "" }
+}
+
+private fun formatQueueDateTime(dateStr: String): String {
+    return try {
+        // "2026-04-24T09:30:00" → "24/04 às 09:30"
+        val date = dateStr.take(10).split("-")
+        val time = dateStr.substringAfter("T").take(5)
+        if (date.size == 3) "${date[2]}/${date[1]} às $time" else time
     } catch (_: Exception) { "" }
 }
