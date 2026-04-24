@@ -253,6 +253,7 @@ fun NavGraph(
             )
         }
 
+
         composable(Routes.AttendanceQueue.route) {
             AttendanceQueueScreen(
                 onBack = { navController.popBackStack() },
@@ -264,6 +265,10 @@ fun NavGraph(
                 },
                 // Atendimento já ativo → abre ClientDetailScreen (chat completo com abas)
                 onNavigateToActive = { clientId, _ ->
+                    navController.navigate(Routes.ClientDetail.createRoute(clientId))
+                },
+                // Sessão encerrada → abre ClientDetailScreen para ver histórico
+                onNavigateToClosed = { clientId ->
                     navController.navigate(Routes.ClientDetail.createRoute(clientId))
                 }
             )
