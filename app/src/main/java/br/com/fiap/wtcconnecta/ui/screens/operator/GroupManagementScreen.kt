@@ -27,6 +27,7 @@ import br.com.fiap.wtcconnecta.viewmodel.GroupManagementViewModel
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
@@ -52,20 +53,40 @@ fun GroupManagementScreen(
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5FAFD)
+        containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // Header gradiente
+            // ── Header Hero ───────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .offset(x = 200.dp, y = (-30).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .offset(x = 260.dp, y = 40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.06f))
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 28.dp)
+                ) {
                     IconButton(
-                        onClick = onBack,
+                        onClick  = onBack,
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
@@ -73,17 +94,59 @@ fun GroupManagementScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
                             tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("Grupos e Divisões", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Gerencie a estrutura organizacional",
-                            fontSize = 13.sp, color = Color.White.copy(alpha = 0.72f))
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Grupos e Divisões", fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Gerencie a estrutura organizacional",
+                        fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Pills de contagem
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(Icons.Default.Business, null,
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(12.dp))
+                                Text("${uiState.divisions.size} divisões",
+                                    fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        Surface(
+                            color = Color.White.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(Icons.Default.Group, null,
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(12.dp))
+                                Text("${uiState.groups.size} grupos",
+                                    fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
 
-            // TabRow
+            // ── TabRow ────────────────────────────────────────────────────────
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor   = Color.White,
@@ -100,21 +163,27 @@ fun GroupManagementScreen(
                         Tab(
                             selected = selectedTab == index,
                             onClick  = { selectedTab = index },
-                            text = { Text(label, fontSize = 13.sp,
-                                color = if (selectedTab == index) WtcBlue else TextMuted) },
-                            icon = { Icon(icon, contentDescription = null,
-                                tint = if (selectedTab == index) WtcBlue else TextMuted,
-                                modifier = Modifier.size(18.dp)) }
+                            text = {
+                                Text(label, fontSize = 13.sp,
+                                    color = if (selectedTab == index) WtcBlue else TextMuted)
+                            },
+                            icon = {
+                                Icon(icon, contentDescription = null,
+                                    tint = if (selectedTab == index) WtcBlue else TextMuted,
+                                    modifier = Modifier.size(18.dp))
+                            }
                         )
                     }
             }
 
             when (selectedTab) {
-                0 -> DivisionsTab(divisions = uiState.divisions, isLoading = uiState.isLoading,
+                0 -> DivisionsTab(
+                    divisions = uiState.divisions, isLoading = uiState.isLoading,
                     onCreateDivision = { viewModel.createDivision(it) },
                     onEditDivision   = { id, name -> viewModel.updateDivision(id, name) },
                     onDeleteDivision = { viewModel.deleteDivision(it) })
-                1 -> GroupsTab(groups = uiState.groups, divisions = uiState.divisions,
+                1 -> GroupsTab(
+                    groups = uiState.groups, divisions = uiState.divisions,
                     isLoading = uiState.isLoading,
                     onCreateGroup = { name, divId -> viewModel.createGroup(name, divId) },
                     onEditGroup   = { id, name, divId -> viewModel.updateGroup(id, name, divId) },
@@ -139,42 +208,64 @@ fun DivisionsTab(
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Barra de ação
-        Row(modifier = Modifier.fillMaxWidth().background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF0F6FA))
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
-                Text("${divisions.size} divisão(ões)", fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold, color = WtcBlue,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
-            }
-            Button(onClick = { showCreateDialog = true }, shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "DIVISÕES — ${divisions.size}",
+                fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                color = TextMuted, letterSpacing = 1.2.sp
+            )
+            Button(
+                onClick = { showCreateDialog = true },
+                shape  = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null,
+                    modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text("Nova Divisão", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-        HorizontalDivider(color = WtcBlueHint.copy(alpha = 0.5f))
 
         when {
             isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                CircularProgressIndicator(color = WtcBlue) }
+                CircularProgressIndicator(color = WtcBlue)
+            }
             divisions.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(WtcBluePale),
-                        contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Business, null, tint = WtcBlue, modifier = Modifier.size(28.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(WtcBluePale),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Business, null,
+                            tint = WtcBlue, modifier = Modifier.size(36.dp))
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("Nenhuma divisão cadastrada.", color = TextMuted, fontSize = 14.sp)
+                    Text("Nenhuma divisão cadastrada.", color = TextPrimary,
+                        fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Crie a primeira divisão acima.", color = TextMuted, fontSize = 13.sp)
                 }
             }
-            else -> LazyColumn(Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 items(divisions, key = { it.id }) { division ->
-                    DivisionCard(division, { divisionToEdit = division }, { divisionToDelete = division })
+                    DivisionCard(division,
+                        onEdit   = { divisionToEdit = division },
+                        onDelete = { divisionToDelete = division })
                 }
             }
         }
@@ -197,24 +288,40 @@ fun DivisionsTab(
 
 @Composable
 fun DivisionCard(division: Division, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)).background(WtcBluePale),
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Business, null, tint = WtcBlue, modifier = Modifier.size(20.dp))
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(Color(0xFFCEE6F0)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Business, null,
+                    tint = Color(0xFF074365), modifier = Modifier.size(22.dp))
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(division.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                color = TextPrimary, modifier = Modifier.weight(1f))
-            IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
-                Icon(Icons.Default.Edit, null, tint = WtcBlue, modifier = Modifier.size(17.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(division.name, fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold, color = TextPrimary,
+                modifier = Modifier.weight(1f))
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Edit, null,
+                    tint = WtcBlue, modifier = Modifier.size(18.dp))
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
-                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(17.dp))
+            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Delete, null,
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                    modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -236,60 +343,88 @@ fun GroupsTab(
     val groupsByDivision = groups.groupBy { it.divisionId }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxWidth().background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF0F6FA))
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-            Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
-                Text("${groups.size} grupo(s)", fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold, color = WtcBlue,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
-            }
-            Button(onClick = { showCreateDialog = true }, enabled = divisions.isNotEmpty(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "GRUPOS — ${groups.size}",
+                fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                color = TextMuted, letterSpacing = 1.2.sp
+            )
+            Button(
+                onClick  = { showCreateDialog = true },
+                enabled  = divisions.isNotEmpty(),
+                shape    = RoundedCornerShape(12.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+            ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text("Novo Grupo", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
-        HorizontalDivider(color = WtcBlueHint.copy(alpha = 0.5f))
 
         if (divisions.isEmpty()) {
             Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Text("Crie uma divisão primeiro.", color = TextMuted)
+                Text("Crie uma divisão primeiro.", color = TextMuted, fontSize = 14.sp)
             }
         } else when {
             isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                CircularProgressIndicator(color = WtcBlue) }
+                CircularProgressIndicator(color = WtcBlue)
+            }
             groups.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(WtcBluePale),
-                        contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Group, null, tint = WtcBlue, modifier = Modifier.size(28.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(WtcBluePale),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Group, null,
+                            tint = WtcBlue, modifier = Modifier.size(36.dp))
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("Nenhum grupo cadastrado.", color = TextMuted, fontSize = 14.sp)
+                    Text("Nenhum grupo cadastrado.", color = TextPrimary,
+                        fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Crie o primeiro grupo acima.", color = TextMuted, fontSize = 13.sp)
                 }
             }
-            else -> LazyColumn(Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 divisions.forEach { division ->
                     val divGroups = groupsByDivision[division.id] ?: emptyList()
                     if (divGroups.isNotEmpty()) {
                         item {
-                            Row(verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-                                Icon(Icons.Default.Business, null,
-                                    tint = WtcBlue, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(division.name, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                    color = WtcBlue, letterSpacing = 0.5.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFCEE6F0))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(division.name, fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold, color = Color(0xFF074365),
+                                    letterSpacing = 0.8.sp)
                             }
                         }
                         items(divGroups, key = { it.id }) { group ->
-                            GroupCard(group, { groupToEdit = group }, { groupToDelete = group })
+                            GroupCard(group,
+                                onEdit   = { groupToEdit = group },
+                                onDelete = { groupToDelete = group })
                         }
                     }
                 }
@@ -297,7 +432,8 @@ fun GroupsTab(
         }
     }
 
-    if (showCreateDialog) GroupFormDialog(divisions, onDismiss = { showCreateDialog = false },
+    if (showCreateDialog) GroupFormDialog(divisions,
+        onDismiss = { showCreateDialog = false },
         onConfirm = { name, divId -> onCreateGroup(name, divId); showCreateDialog = false })
 
     groupToEdit?.let { g ->
@@ -313,23 +449,39 @@ fun GroupsTab(
 
 @Composable
 fun GroupCard(group: Group, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(WtcBlueHint),
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Group, null, tint = WtcBlueSoft, modifier = Modifier.size(17.dp))
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(WtcBlueHint),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Group, null,
+                    tint = WtcBlueDark, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(group.name, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                color = TextPrimary, modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(group.name, fontSize = 14.sp,
+                fontWeight = FontWeight.Medium, color = TextPrimary,
+                modifier = Modifier.weight(1f))
             IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Edit, null, tint = WtcBlue, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Edit, null,
+                    tint = WtcBlue, modifier = Modifier.size(16.dp))
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error,
+                Icon(Icons.Default.Delete, null,
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                     modifier = Modifier.size(16.dp))
             }
         }
@@ -348,7 +500,8 @@ fun EditNameDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
-            OutlinedTextField(value = name, onValueChange = { name = it },
+            OutlinedTextField(
+                value = name, onValueChange = { name = it },
                 label = { Text(placeholder) }, singleLine = true,
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -356,11 +509,16 @@ fun EditNameDialog(
                     cursorColor = WtcBlue))
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotBlank()) onConfirm(name) },
-                enabled = name.isNotBlank(), shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) { Text("Salvar") }
+            Button(
+                onClick  = { if (name.isNotBlank()) onConfirm(name) },
+                enabled  = name.isNotBlank(),
+                shape    = RoundedCornerShape(10.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+            ) { Text("Salvar", fontWeight = FontWeight.SemiBold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
 
@@ -376,28 +534,37 @@ fun GroupFormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialName.isBlank()) "Novo Grupo" else "Editar Grupo",
-            fontWeight = FontWeight.Bold, color = TextPrimary) },
+        title = {
+            Text(
+                if (initialName.isBlank()) "Novo Grupo" else "Editar Grupo",
+                fontWeight = FontWeight.Bold, color = TextPrimary)
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it },
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
                     label = { Text("Nome do grupo") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
                         cursorColor = WtcBlue))
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                ExposedDropdownMenuBox(expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = selectedDivision?.name ?: "Selecione uma divisão *",
-                        onValueChange = {}, readOnly = true, label = { Text("Divisão") },
+                        onValueChange = {}, readOnly = true,
+                        label = { Text("Divisão") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp), isError = selectedDivision == null,
+                        shape = RoundedCornerShape(12.dp),
+                        isError = selectedDivision == null,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint))
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(expanded = expanded,
+                        onDismissRequest = { expanded = false }) {
                         divisions.forEach { d ->
-                            DropdownMenuItem(text = { Text(d.name) },
+                            DropdownMenuItem(
+                                text = { Text(d.name) },
                                 onClick = { selectedDivision = d; expanded = false })
                         }
                     }
@@ -409,12 +576,19 @@ fun GroupFormDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { if (name.isNotBlank() && selectedDivision != null) onConfirm(name, selectedDivision!!.id) },
+            Button(
+                onClick = {
+                    if (name.isNotBlank() && selectedDivision != null)
+                        onConfirm(name, selectedDivision!!.id)
+                },
                 enabled = name.isNotBlank() && selectedDivision != null,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) { Text("Salvar") }
+                shape   = RoundedCornerShape(10.dp),
+                colors  = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+            ) { Text("Salvar", fontWeight = FontWeight.SemiBold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
 
@@ -426,9 +600,12 @@ fun ConfirmDeleteDialog(itemName: String, onDismiss: () -> Unit, onConfirm: () -
         text  = { Text("\"$itemName\" será removido permanentemente.", color = TextMuted) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Remover", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                Text("Remover", color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
+        }
     )
 }
