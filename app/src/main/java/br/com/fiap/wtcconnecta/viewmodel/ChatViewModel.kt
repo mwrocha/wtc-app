@@ -61,7 +61,6 @@ class ChatViewModel(
             val messages: List<Message> = when (chatType) {
                 "group" -> repository.getConversation(chatId)
                 else    -> {
-                    // ← CORREÇÃO 1: email direto do operador sem histórico ainda
                     if (chatId.contains("@") && !chatId.contains("_")) {
                         emptyList()
                     } else if (!chatId.contains("@")) {
@@ -73,7 +72,13 @@ class ChatViewModel(
                             }
                             if (filtered.isNotEmpty()) {
                                 val realConversationId = filtered.first().conversationId
-                                if (realConversationId != null) currentChatId = realConversationId
+                                val loggedEmail = getLoggedEmail()
+                                // Só atualiza currentChatId se o conversationId contém
+                                // o email do usuário logado — evita contaminação
+                                if (realConversationId != null &&
+                                    (loggedEmail == null || realConversationId.contains(loggedEmail))) {
+                                    currentChatId = realConversationId
+                                }
                             }
                             filtered
                         } catch (e: Exception) { emptyList() }
@@ -148,7 +153,6 @@ class ChatViewModel(
         }
     }
 
-    // ── Marcar conversa como lida ao abrir o chat ─────────────────────────────
     fun markConversationAsRead(conversationId: String) {
         if (conversationId.isBlank()) return
         viewModelScope.launch {
@@ -201,7 +205,6 @@ class ChatViewModel(
         if (text.isBlank()) return
         viewModelScope.launch {
 
-            // 1. Adiciona mensagem otimista com status SENDING
             val tempId = "temp_${System.currentTimeMillis()}"
             val tempMessage = Message(
                 id             = tempId,
@@ -224,14 +227,12 @@ class ChatViewModel(
                 }
 
                 if (success) {
-                    // 2. Sucesso: remove a mensagem temporária e recarrega do servidor
                     val idToFetch = if (currentChatId.isNotBlank()) currentChatId else chatId
                     _uiState.update { state ->
                         state.copy(messages = state.messages.filter { it.id != tempId })
                     }
                     fetchMessages(idToFetch, chatType, senderId)
                 } else {
-                    // 3. Falha: atualiza status para FAILED
                     _uiState.update { state ->
                         state.copy(messages = state.messages.map { msg ->
                             if (msg.id == tempId) msg.copy(statusRaw = MessageStatus.FAILED.name)
@@ -254,33 +255,52 @@ class ChatViewModel(
     }
 
     private fun resolveReceiverId(senderEmail: String): String {
-        val convId = currentChatId
-
-        // ← CORREÇÃO 2: email direto do operador, usa ele como destinatário
+        // Caso 1: chatId é diretamente o email do operador (sem histórico ainda)
         if (originalChatId.contains("@") && !originalChatId.contains("_")) {
             return originalChatId
         }
 
+        // Caso 2: chatId não é email — usa como recipientId direto (ID de grupo etc)
         if (!originalChatId.contains("@")) return originalChatId
 
+        // Caso 3: conversationId no formato email_email — extrai o outro email
+        val convId = currentChatId.ifBlank { originalChatId }
         if (convId.contains("@") && convId.contains("_")) {
-            val atPositions = convId.indices.filter { convId[it] == '@' }
-            if (atPositions.size >= 2) {
-                val splitPoint = convId.indexOf("_", atPositions[0])
-                val emailFirst  = convId.substring(0, splitPoint)
-                val emailSecond = convId.substring(splitPoint + 1)
-                return if (emailFirst == senderEmail) emailSecond else emailFirst
-            }
-            val parts = convId.split("_")
-            val emailA = parts.take(parts.size / 2 + 1).joinToString("_")
-            val emailB = parts.drop(parts.size / 2 + 1).joinToString("_")
-            return when {
-                emailA == senderEmail -> emailB
-                emailB == senderEmail -> emailA
-                else -> originalChatId
+            val firstAt    = convId.indexOf("@")
+            val splitPoint = convId.indexOf("_", firstAt)
+            if (splitPoint > 0) {
+                val emailA = convId.substring(0, splitPoint)
+                val emailB = convId.substring(splitPoint + 1)
+                return when {
+                    emailA.equals(senderEmail, ignoreCase = true) -> emailB
+                    emailB.equals(senderEmail, ignoreCase = true) -> emailA
+                    else -> {
+                        // Nenhum email corresponde ao remetente — conversationId contaminado
+                        // Fallback seguro para o chatId original
+                        Log.w("ChatViewModel", "resolveReceiverId: convId contaminado " +
+                                "convId=$convId sender=$senderEmail → fallback=$originalChatId")
+                        originalChatId
+                    }
+                }
             }
         }
         return originalChatId
+    }
+
+    // ── Extrai o email do usuário logado a partir do JWT ──────────────────────
+    private fun getLoggedEmail(): String? {
+        val token = RetrofitClient.authToken ?: return null
+        return try {
+            val payload = token.split(".")[1]
+            val decoded = android.util.Base64.decode(
+                payload.padEnd((payload.length + 3) / 4 * 4, '='),
+                android.util.Base64.URL_SAFE
+            )
+            val json = String(decoded)
+            val start = json.indexOf("\"sub\"") + 7
+            val end   = json.indexOf("\"", start)
+            if (start > 6 && end > start) json.substring(start, end) else null
+        } catch (e: Exception) { null }
     }
 
     fun clearError() { _uiState.update { it.copy(error = null) } }
