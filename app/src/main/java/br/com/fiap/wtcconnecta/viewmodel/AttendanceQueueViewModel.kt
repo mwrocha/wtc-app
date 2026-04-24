@@ -10,9 +10,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Sessão encerrada retornada pelo backend
+data class ClosedSession(
+    val sessionId: String = "",
+    val conversationId: String = "",
+    val clientEmail: String = "",
+    val clientName: String = "",
+    val clientId: String = "",
+    val assumedAt: String = "",
+    val closedAt: String = ""
+)
+
 data class AttendanceQueueUiState(
     val pendingConversations: List<PendingConversation> = emptyList(),
     val activeConversations: List<PendingConversation> = emptyList(),
+    val closedSessions: List<ClosedSession> = emptyList(),
     val pendingCount: Long = 0L,
     val isLoading: Boolean = false,
     val isAssuming: Boolean = false,
@@ -31,15 +43,28 @@ class AttendanceQueueViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val pending    = RetrofitClient.instance.getPendingConversations()
-                val active     = RetrofitClient.instance.getMyActiveConversations()
-                val countResp  = RetrofitClient.instance.getPendingCount()
+                val pending  = RetrofitClient.instance.getPendingConversations()
+                val active   = RetrofitClient.instance.getMyActiveConversations()
+                val closed   = RetrofitClient.instance.getMyClosedSessions()
+                val countResp = RetrofitClient.instance.getPendingCount()
+
                 _uiState.update {
                     it.copy(
                         isLoading            = false,
                         pendingConversations = pending,
                         activeConversations  = active,
-                        pendingCount         = countResp.count
+                        closedSessions       = closed.map { map ->
+                            ClosedSession(
+                                sessionId      = map["sessionId"]      ?: "",
+                                conversationId = map["conversationId"] ?: "",
+                                clientEmail    = map["clientEmail"]    ?: "",
+                                clientName     = map["clientName"]     ?: "",
+                                clientId       = map["clientId"]       ?: "",
+                                assumedAt      = map["assumedAt"]      ?: "",
+                                closedAt       = map["closedAt"]       ?: ""
+                            )
+                        },
+                        pendingCount = countResp.count
                     )
                 }
             } catch (e: Exception) {
@@ -55,7 +80,9 @@ class AttendanceQueueViewModel : ViewModel() {
                 try {
                     val countResp = RetrofitClient.instance.getPendingCount()
                     val active    = RetrofitClient.instance.getMyActiveConversations()
-                    _uiState.update { it.copy(pendingCount = countResp.count, activeConversations = active) }
+                    _uiState.update {
+                        it.copy(pendingCount = countResp.count, activeConversations = active)
+                    }
                 } catch (_: Exception) {}
             }
         }
