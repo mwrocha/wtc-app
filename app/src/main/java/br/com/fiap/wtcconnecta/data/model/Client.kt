@@ -11,6 +11,6 @@ data class Client(
     val tags: List<String> = emptyList(),  // nunca null
     val divisionId: String? = null,
     val groupId: String? = null,
-    val noteIds: List<String> = emptyList(),
+    val noteIds: List<String>? = emptyList(),
     val active: Boolean = true
 )
