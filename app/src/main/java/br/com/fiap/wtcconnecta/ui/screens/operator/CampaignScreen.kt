@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +35,7 @@ private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
+private val WtcBlueDark = Color(0xFF063D5C)
 private val TextMuted   = Color(0xFF6E90A0)
 private val ColorSent   = Color(0xFF1A7A5E)
 private val ColorDraft  = Color(0xFFE65100)
@@ -57,30 +59,53 @@ fun CampaignScreen(
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5FAFD),
+        containerColor = Color(0xFFF0F6FA),
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick        = { showCreateDialog = true },
-                icon           = { Icon(Icons.Default.Add, contentDescription = null) },
-                text           = { Text("Nova Campanha", fontWeight = FontWeight.SemiBold) },
-                containerColor = WtcBlue,
+                icon           = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                text           = { Text("Nova Campanha", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                containerColor = WtcBlueDark,
                 contentColor   = Color.White,
-                shape          = RoundedCornerShape(14.dp)
+                shape          = RoundedCornerShape(16.dp),
+                modifier       = Modifier.padding(bottom = 8.dp)
             )
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-            // Header gradiente
+            // ── Header Hero ───────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(WtcBlue, WtcBlueSoft)))
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
+                    .statusBarsPadding()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Detalhes geométricos decorativos
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .offset(x = 210.dp, y = (-30).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .offset(x = 260.dp, y = 50.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.06f))
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 28.dp)
+                ) {
+                    // Botão voltar
                     IconButton(
-                        onClick = onBack,
+                        onClick  = onBack,
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
@@ -88,12 +113,48 @@ fun CampaignScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
                             tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("Campanhas", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("Gerencie e dispare campanhas",
-                            fontSize = 13.sp, color = Color.White.copy(alpha = 0.72f))
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        "Campanhas",
+                        fontSize   = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = Color.White,
+                        lineHeight = 30.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Gerencie e dispare campanhas",
+                        fontSize     = 13.sp,
+                        color        = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Pill com contagem
+                    if (true) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Campaign, contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(13.dp))
+                                Text(
+                                    "Painel do operador",
+                                    fontSize   = 11.sp,
+                                    color      = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -103,17 +164,23 @@ fun CampaignScreen(
                     CircularProgressIndicator(color = WtcBlue)
                 }
                 uiState.campaigns.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(modifier = Modifier.size(80.dp).clip(CircleShape)
-                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(WtcBluePale),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(Icons.Default.Campaign, contentDescription = null,
                                 modifier = Modifier.size(40.dp), tint = WtcBlue)
                         }
-                        Spacer(modifier = Modifier.height(14.dp))
                         Text("Nenhuma campanha ainda", fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text("Crie sua primeira campanha abaixo!", fontSize = 13.sp,
-                            color = TextMuted, modifier = Modifier.padding(top = 4.dp))
+                        Text("Crie sua primeira campanha abaixo!", fontSize = 13.sp, color = TextMuted)
                     }
                 }
                 else -> LazyColumn(
@@ -122,9 +189,9 @@ fun CampaignScreen(
                     contentPadding = PaddingValues(top = 20.dp, bottom = 100.dp)
                 ) {
                     item {
-                        Text("${uiState.campaigns.size} campanha(s)",
+                        Text("CAMPANHAS — ${uiState.campaigns.size}",
                             fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                            color = TextMuted, letterSpacing = 0.5.sp,
+                            color = TextMuted, letterSpacing = 1.2.sp,
                             modifier = Modifier.padding(bottom = 4.dp))
                     }
                     items(uiState.campaigns.sortedByDescending { it.createdAt }) { campaign ->
