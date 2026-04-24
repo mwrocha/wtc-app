@@ -12,12 +12,13 @@ import kotlinx.coroutines.launch
 
 data class AttendanceQueueUiState(
     val pendingConversations: List<PendingConversation> = emptyList(),
+    val activeConversations: List<PendingConversation> = emptyList(),
     val pendingCount: Long = 0L,
     val isLoading: Boolean = false,
     val isAssuming: Boolean = false,
-    val assumeSuccess: String? = null,      // conversationId assumido
-    val assumedClientId: String? = null,    // ← clientId para navegação direta
-    val assumedClientName: String? = null,  // ← clientName para exibição
+    val assumeSuccess: String? = null,
+    val assumedClientId: String? = null,
+    val assumedClientName: String? = null,
     val error: String? = null
 )
 
@@ -30,12 +31,14 @@ class AttendanceQueueViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val conversations = RetrofitClient.instance.getPendingConversations()
-                val countResp     = RetrofitClient.instance.getPendingCount()
+                val pending    = RetrofitClient.instance.getPendingConversations()
+                val active     = RetrofitClient.instance.getMyActiveConversations()
+                val countResp  = RetrofitClient.instance.getPendingCount()
                 _uiState.update {
                     it.copy(
                         isLoading            = false,
-                        pendingConversations = conversations,
+                        pendingConversations = pending,
+                        activeConversations  = active,
                         pendingCount         = countResp.count
                     )
                 }
@@ -45,14 +48,14 @@ class AttendanceQueueViewModel : ViewModel() {
         }
     }
 
-    // Polling a cada 15 segundos para atualizar o badge
     fun startPolling() {
         viewModelScope.launch {
             while (true) {
                 delay(15_000)
                 try {
                     val countResp = RetrofitClient.instance.getPendingCount()
-                    _uiState.update { it.copy(pendingCount = countResp.count) }
+                    val active    = RetrofitClient.instance.getMyActiveConversations()
+                    _uiState.update { it.copy(pendingCount = countResp.count, activeConversations = active) }
                 } catch (_: Exception) {}
             }
         }
@@ -62,7 +65,6 @@ class AttendanceQueueViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isAssuming = true, error = null) }
             try {
-                // ← Busca os dados do cliente ANTES de remover da lista
                 val conv = _uiState.value.pendingConversations
                     .find { it.conversationId == conversationId }
                 val clientId   = conv?.clientId   ?: ""
@@ -74,8 +76,8 @@ class AttendanceQueueViewModel : ViewModel() {
                         state.copy(
                             isAssuming           = false,
                             assumeSuccess        = conversationId,
-                            assumedClientId      = clientId,    // ← salva antes de remover
-                            assumedClientName    = clientName,  // ← salva antes de remover
+                            assumedClientId      = clientId,
+                            assumedClientName    = clientName,
                             pendingConversations = state.pendingConversations
                                 .filter { it.conversationId != conversationId },
                             pendingCount         = (state.pendingCount - 1).coerceAtLeast(0)
