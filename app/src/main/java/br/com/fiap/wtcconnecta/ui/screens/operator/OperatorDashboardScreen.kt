@@ -74,6 +74,8 @@ fun OperatorDashboardScreen(
     var pendingRequestsCount by remember { mutableIntStateOf(0) }
     var attendanceStats      by remember { mutableStateOf(MyAttendanceStats()) }
     var operatorAvatarUrl    by remember { mutableStateOf<String?>(null) }
+    var ratingAverage        by remember { mutableStateOf<Double?>(null) }
+    var ratingTotal          by remember { mutableIntStateOf(0) }
     var showGroupMessageDialog by remember { mutableStateOf(false) }
     var showLogoutDialog       by remember { mutableStateOf(false) }
 
@@ -103,6 +105,14 @@ fun OperatorDashboardScreen(
                     today     = (stats["today"]     ?: 0L).toInt(),
                     thisMonth = (stats["thisMonth"] ?: 0L).toInt()
                 )
+            } catch (_: Exception) {}
+            try {
+                val ratingResp = RetrofitClient.instance.getMyRatingStats()
+                if (ratingResp.isSuccessful) {
+                    val body = ratingResp.body()
+                    ratingAverage = (body?.get("average") as? Number)?.toDouble()
+                    ratingTotal   = (body?.get("total")   as? Number)?.toInt() ?: 0
+                }
             } catch (_: Exception) {}
             kotlinx.coroutines.delay(30_000)
         }
@@ -362,6 +372,62 @@ fun OperatorDashboardScreen(
                                 color    = TextMuted,
                                 bgColor  = Color(0xFFF0F6FA)
                             )
+                        }
+                    }
+                }
+
+                // ── Avaliação média ──────────────────────────────────────────
+                if (ratingAverage != null && ratingTotal > 0) {
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(13.dp))
+                                    .background(Color(0xFFFFF8E1)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Star, null,
+                                    tint     = Color(0xFFFFB300),
+                                    modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Avaliação dos Clientes",
+                                    fontSize   = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color      = TextPrimary)
+                                Text("Baseado em $ratingTotal avaliação(ões)",
+                                    fontSize = 12.sp,
+                                    color    = TextMuted,
+                                    modifier = Modifier.padding(top = 2.dp))
+                            }
+                            // Nota média em destaque
+                            Column(horizontalAlignment = Alignment.End) {
+                                Row(verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Default.Star, null,
+                                        tint     = Color(0xFFFFB300),
+                                        modifier = Modifier.size(16.dp))
+                                    Text(
+                                        String.format("%.1f", ratingAverage),
+                                        fontSize   = 22.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color      = TextPrimary
+                                    )
+                                }
+                                Text("/ 5.0", fontSize = 11.sp, color = TextMuted)
+                            }
                         }
                     }
                 }
