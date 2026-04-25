@@ -1,6 +1,7 @@
 package br.com.fiap.wtcconnecta.ui.screens.operator
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,9 +18,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.viewmodel.AttendanceQueueViewModel
@@ -70,6 +73,7 @@ fun OperatorDashboardScreen(
 
     var pendingRequestsCount by remember { mutableIntStateOf(0) }
     var attendanceStats      by remember { mutableStateOf(MyAttendanceStats()) }
+    var operatorAvatarUrl    by remember { mutableStateOf<String?>(null) }
     var showGroupMessageDialog by remember { mutableStateOf(false) }
     var showLogoutDialog       by remember { mutableStateOf(false) }
 
@@ -79,6 +83,14 @@ fun OperatorDashboardScreen(
         viewModel.retryFetch()
         queueViewModel.load()
         queueViewModel.startPolling()
+        // Busca avatar do operador uma vez ao entrar
+        try {
+            val resp = RetrofitClient.instance.getMyAvatar()
+            if (resp.isSuccessful) {
+                val url = resp.body()?.get("url") as? String
+                if (!url.isNullOrBlank()) operatorAvatarUrl = url
+            }
+        } catch (_: Exception) {}
         while (true) {
             try {
                 val requests = RetrofitClient.instance.getGroupChangeRequests()
@@ -143,15 +155,32 @@ fun OperatorDashboardScreen(
                             color        = Color.White.copy(alpha = 0.70f),
                             letterSpacing = 0.5.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconButton(
-                                onClick  = onNavigateToProfile,
+                            Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(Color.White.copy(alpha = 0.12f), CircleShape)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.18f))
+                                    .clickable { onNavigateToProfile() },
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.AccountCircle, contentDescription = "Perfil",
-                                    tint     = Color.White.copy(alpha = 0.85f),
-                                    modifier = Modifier.size(18.dp))
+                                val avatarUrl = operatorAvatarUrl
+                                if (!avatarUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model              = avatarUrl,
+                                        contentDescription = "Avatar do operador",
+                                        contentScale       = ContentScale.Crop,
+                                        modifier           = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                    )
+                                } else {
+                                    Text(
+                                        firstName.firstOrNull()?.uppercase() ?: "O",
+                                        fontSize   = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color      = Color.White
+                                    )
+                                }
                             }
                             IconButton(
                                 onClick  = { showLogoutDialog = true },
