@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.fiap.wtcconnecta.data.model.Client
 import br.com.fiap.wtcconnecta.data.model.Message
-import br.com.fiap.wtcconnecta.data.model.MessageStatus
 import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.data.repository.AuthRepository
 import java.text.SimpleDateFormat
@@ -17,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import br.com.fiap.wtcconnecta.data.model.MessageStatus
+import br.com.fiap.wtcconnecta.data.remote.RatingRequest
+
+private const val FAREWELL_MARKER = "Atendimento encerrado"
 
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
@@ -24,7 +27,10 @@ data class ChatUiState(
     val error: String? = null,
     val actionError: String? = null,
     val currentClient: Client? = null,
-    val senderNames: Map<String, String> = emptyMap()
+    val senderNames: Map<String, String> = emptyMap(),
+    // ── Avaliação ─────────────────────────────────────────────────────────────
+    val showRatingDialog: Boolean = false,
+    val pendingRatingSessionId: String? = null
 )
 
 class ChatViewModel(
@@ -38,12 +44,18 @@ class ChatViewModel(
     private var currentChatType: String = ""
     private var currentLoggedId: String = ""
     private var originalChatId: String = ""
+    private var ratingChecked: Boolean = false
 
     fun loadMessages(chatId: String, chatType: String, loggedInUserId: String) {
+        // ← só reseta ratingChecked se for um chat diferente
+        if (chatId != currentChatId) {
+            ratingChecked = false
+        }
         currentChatId   = chatId
         originalChatId  = chatId
         currentChatType = chatType
         currentLoggedId = loggedInUserId
+        ratingChecked   = false
 
         viewModelScope.launch {
             Log.d("ChatViewModel", "Carregando mensagens chatId=$chatId, tipo=$chatType")
@@ -73,8 +85,6 @@ class ChatViewModel(
                             if (filtered.isNotEmpty()) {
                                 val realConversationId = filtered.first().conversationId
                                 val loggedEmail = getLoggedEmail()
-                                // Só atualiza currentChatId se o conversationId contém
-                                // o email do usuário logado — evita contaminação
                                 if (realConversationId != null &&
                                     (loggedEmail == null || realConversationId.contains(loggedEmail))) {
                                     currentChatId = realConversationId
@@ -124,17 +134,76 @@ class ChatViewModel(
                 )
             }
 
+            checkForPendingRating(messages, chatType)
+
         } catch (e: HttpException) {
             Log.e("ChatViewModel", "Erro HTTP ${e.code()}: ${e.message()}")
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    error = if (e.code() == 404) "Nenhuma mensagem encontrada." else "Erro ao carregar mensagens."
+                    error = if (e.code() == 404) "Nenhuma mensagem encontrada."
+                    else "Erro ao carregar mensagens."
                 )
             }
         } catch (e: Exception) {
             Log.e("ChatViewModel", "Erro inesperado: ${e.message}")
             _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar mensagens.") }
+        }
+    }
+
+    private val shownRatingSessions = mutableSetOf<String>()
+
+    private fun checkForPendingRating(messages: List<Message>, chatType: String) {
+        if (ratingChecked || chatType == "group") return
+
+        val lastMessage = messages.lastOrNull() ?: return
+        if (!lastMessage.displayContent.contains(FAREWELL_MARKER)) return
+
+        ratingChecked = true
+
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getPendingRating()
+                if (response.isSuccessful) {
+                    val body = response.body() ?: return@launch
+                    val hasPending = body["hasPending"] as? Boolean ?: false
+                    if (hasPending) {
+                        val sessionId = body["sessionId"] as? String ?: return@launch
+                        // ← só mostra se ainda não foi mostrado/dispensado nessa sessão
+                        if (sessionId !in shownRatingSessions) {
+                            shownRatingSessions.add(sessionId)
+                            _uiState.update {
+                                it.copy(showRatingDialog = true, pendingRatingSessionId = sessionId)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("RatingDebug", "Erro getPendingRating — ${e.message}")
+            }
+        }
+    }
+
+    fun dismissRating() {
+        val sessionId = _uiState.value.pendingRatingSessionId
+        if (!sessionId.isNullOrBlank()) shownRatingSessions.add(sessionId)
+        _uiState.update { it.copy(showRatingDialog = false, pendingRatingSessionId = null) }
+    }
+
+    fun submitRating(stars: Int, comment: String?) {
+        val sessionId = _uiState.value.pendingRatingSessionId ?: return
+        viewModelScope.launch {
+            try {
+                val request = RatingRequest(stars = stars, comment = comment?.ifBlank { null })
+                val response = RetrofitClient.instance.submitRating(sessionId, request)
+                Log.d("RatingDebug", "Resposta — code=${response.code()}")
+            } catch (e: Exception) {
+                Log.e("RatingDebug", "Erro: ${e.message}")
+            } finally {
+                _uiState.update {
+                    it.copy(showRatingDialog = false, pendingRatingSessionId = null)
+                }
+            }
         }
     }
 
@@ -158,7 +227,6 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 RetrofitClient.instance.markConversationAsRead(conversationId)
-                Log.d("ChatViewModel", "Conversa marcada como lida: $conversationId")
             } catch (e: Exception) {
                 Log.w("ChatViewModel", "Erro ao marcar como lida: ${e.message}")
             }
@@ -204,7 +272,6 @@ class ChatViewModel(
     fun sendMessage(text: String, chatId: String, chatType: String, senderId: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
-
             val tempId = "temp_${System.currentTimeMillis()}"
             val tempMessage = Message(
                 id             = tempId,
@@ -214,9 +281,7 @@ class ChatViewModel(
                 createdAt      = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date()),
                 statusRaw      = MessageStatus.SENDING.name
             )
-            _uiState.update { state ->
-                state.copy(messages = state.messages + tempMessage)
-            }
+            _uiState.update { state -> state.copy(messages = state.messages + tempMessage) }
 
             try {
                 val success = if (chatType == "group") {
@@ -255,15 +320,11 @@ class ChatViewModel(
     }
 
     private fun resolveReceiverId(senderEmail: String): String {
-        // Caso 1: chatId é diretamente o email do operador (sem histórico ainda)
         if (originalChatId.contains("@") && !originalChatId.contains("_")) {
             return originalChatId
         }
-
-        // Caso 2: chatId não é email — usa como recipientId direto (ID de grupo etc)
         if (!originalChatId.contains("@")) return originalChatId
 
-        // Caso 3: conversationId no formato email_email — extrai o outro email
         val convId = currentChatId.ifBlank { originalChatId }
         if (convId.contains("@") && convId.contains("_")) {
             val firstAt    = convId.indexOf("@")
@@ -275,8 +336,6 @@ class ChatViewModel(
                     emailA.equals(senderEmail, ignoreCase = true) -> emailB
                     emailB.equals(senderEmail, ignoreCase = true) -> emailA
                     else -> {
-                        // Nenhum email corresponde ao remetente — conversationId contaminado
-                        // Fallback seguro para o chatId original
                         Log.w("ChatViewModel", "resolveReceiverId: convId contaminado " +
                                 "convId=$convId sender=$senderEmail → fallback=$originalChatId")
                         originalChatId
@@ -287,7 +346,6 @@ class ChatViewModel(
         return originalChatId
     }
 
-    // ── Extrai o email do usuário logado a partir do JWT ──────────────────────
     private fun getLoggedEmail(): String? {
         val token = RetrofitClient.authToken ?: return null
         return try {
