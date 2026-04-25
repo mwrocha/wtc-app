@@ -42,7 +42,7 @@ data class PendingConversation(
     val conversationId: String,
     val clientEmail: String,
     val clientName: String,
-    val clientId: String = "",  // ← para navegação direta ao ClientDetailScreen
+    val clientId: String = "",
     val lastMessagePreview: String,
     val status: String,
     val createdAt: String,
@@ -65,6 +65,12 @@ data class ConversationStatusResponse(
     val status: String,
     val assignedOperatorEmail: String,
     val assumedAt: String
+)
+
+// ── Avaliação de Atendimento ──────────────────────────────────────────────────
+data class RatingRequest(
+    val stars: Int,
+    val comment: String? = null
 )
 
 interface ApiService {
@@ -157,7 +163,7 @@ interface ApiService {
     @GET("api/users/by-email/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): UserPublicDto
 
-    @PATCH("api/users/me/fcm-token")      // ← correto
+    @PATCH("api/users/me/fcm-token")
     suspend fun updateFcmToken(@Body body: Map<String, String>): Response<Void>
 
     @POST("api/users/change-password")
@@ -295,4 +301,17 @@ interface ApiService {
 
     @GET("api/conversations/my-stats")
     suspend fun getMyAttendanceStats(): Map<String, Long>
+
+    // ── Avaliação de Atendimento ──────────────────────────────────────────────
+    @GET("api/ratings/pending")
+    suspend fun getPendingRating(): Response<Map<String, Any>>
+
+    @POST("api/ratings/{sessionId}")
+    suspend fun submitRating(
+        @Path("sessionId") sessionId: String,
+        @Body body: RatingRequest
+    ): Response<Map<String, String>>
+
+    @GET("api/ratings/my-stats")
+    suspend fun getMyRatingStats(): Response<Map<String, Any>>
 }
