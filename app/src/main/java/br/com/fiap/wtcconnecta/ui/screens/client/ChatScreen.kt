@@ -33,7 +33,7 @@ import br.com.fiap.wtcconnecta.ui.components.SwipeableMessageBubble
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
 import br.com.fiap.wtcconnecta.ui.components.MessageStatusIcon
-import br.com.fiap.wtcconnecta.data.model.MessageStatus
+import br.com.fiap.wtcconnecta.ui.components.RatingDialog
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
@@ -358,6 +358,14 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    // ── Dialog de avaliação ───────────────────────────────────────────────────────
+    if (uiState.showRatingDialog) {
+        RatingDialog(
+            onSubmit  = { stars, comment -> viewModel.submitRating(stars, comment) },
+            onDismiss = { viewModel.dismissRating() }
+        )
     }
 
     // ── Dialog editar ─────────────────────────────────────────────────────────
