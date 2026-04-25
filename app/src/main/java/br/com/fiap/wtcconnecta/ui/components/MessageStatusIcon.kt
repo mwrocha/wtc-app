@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.fiap.wtcconnecta.data.model.MessageStatus
 
+
 /**
  * Ícone de status de mensagem estilo WhatsApp.
  * Exibido apenas nas mensagens enviadas pelo usuário atual.
