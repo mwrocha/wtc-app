@@ -28,7 +28,6 @@ data class ChatUiState(
     val actionError: String? = null,
     val currentClient: Client? = null,
     val senderNames: Map<String, String> = emptyMap(),
-    // ── Avaliação ─────────────────────────────────────────────────────────────
     val showRatingDialog: Boolean = false,
     val pendingRatingSessionId: String? = null
 )
@@ -45,9 +44,10 @@ class ChatViewModel(
     private var currentLoggedId: String = ""
     private var originalChatId: String = ""
     private var ratingChecked: Boolean = false
+    private val shownRatingSessions = mutableSetOf<String>()
 
     fun loadMessages(chatId: String, chatType: String, loggedInUserId: String) {
-        // ← só reseta ratingChecked se for um chat diferente
+        // Só reseta ratingChecked se for um chat diferente
         if (chatId != currentChatId) {
             ratingChecked = false
         }
@@ -55,7 +55,6 @@ class ChatViewModel(
         originalChatId  = chatId
         currentChatType = chatType
         currentLoggedId = loggedInUserId
-        ratingChecked   = false
 
         viewModelScope.launch {
             Log.d("ChatViewModel", "Carregando mensagens chatId=$chatId, tipo=$chatType")
@@ -134,6 +133,12 @@ class ChatViewModel(
                 )
             }
 
+            // Marca conversa como lida ao carregar
+            val convId = currentChatId.ifBlank { chatId }
+            if (convId.isNotBlank() && chatType != "group") {
+                markConversationAsRead(convId)
+            }
+
             checkForPendingRating(messages, chatType)
 
         } catch (e: HttpException) {
@@ -151,8 +156,6 @@ class ChatViewModel(
         }
     }
 
-    private val shownRatingSessions = mutableSetOf<String>()
-
     private fun checkForPendingRating(messages: List<Message>, chatType: String) {
         if (ratingChecked || chatType == "group") return
 
@@ -169,7 +172,6 @@ class ChatViewModel(
                     val hasPending = body["hasPending"] as? Boolean ?: false
                     if (hasPending) {
                         val sessionId = body["sessionId"] as? String ?: return@launch
-                        // ← só mostra se ainda não foi mostrado/dispensado nessa sessão
                         if (sessionId !in shownRatingSessions) {
                             shownRatingSessions.add(sessionId)
                             _uiState.update {
