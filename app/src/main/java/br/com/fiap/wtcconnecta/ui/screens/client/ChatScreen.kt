@@ -1,5 +1,7 @@
 package br.com.fiap.wtcconnecta.ui.screens.client
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +32,7 @@ import br.com.fiap.wtcconnecta.ui.components.ImageMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.ImagePickerButton
 import br.com.fiap.wtcconnecta.ui.components.ImagePreviewBar
 import br.com.fiap.wtcconnecta.ui.components.MessageActionsState
+import br.com.fiap.wtcconnecta.ui.components.PdfMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.SwipeableMessageBubble
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
@@ -46,6 +50,7 @@ private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
 
 private val IMG_REGEX = Regex("""\[img:(images/[^\]]+)]""")
+private val PDF_REGEX = Regex("""\[pdf:(images/[^\]]+)]""")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +63,7 @@ fun ChatScreen(
     viewModel: ChatViewModel = viewModel()
 ) {
     val uiState           by viewModel.uiState.collectAsState()
+    val context           = LocalContext.current
     var messageText       by remember { mutableStateOf("") }
     var replyTo           by remember { mutableStateOf<Message?>(null) }
     var messageToEdit     by remember { mutableStateOf<Message?>(null) }
@@ -66,8 +72,11 @@ fun ChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val uploadViewModel: ImageUploadViewModel = viewModel()
-    var pendingImageUri by remember { mutableStateOf<String?>(null) }
-    var pendingImageKey by remember { mutableStateOf<String?>(null) }
+    val uploadState by uploadViewModel.uiState.collectAsState()
+    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileName by remember { mutableStateOf<String?>(null) }
+    var pendingIsPdf    by remember { mutableStateOf(false) }
 
     LaunchedEffect(chatId, chatType) {
         Log.d("ChatScreen", "Abrindo chat: id=$chatId, type=$chatType")
@@ -82,7 +91,6 @@ fun ChatScreen(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFFF0F6FA),
         topBar = {
-            // ── TopBar com gradiente ──────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,8 +107,6 @@ fun ChatScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Voltar", tint = Color.White)
                     }
-
-                    // Avatar inicial
                     Box(
                         modifier = Modifier
                             .size(38.dp)
@@ -108,120 +114,136 @@ fun ChatScreen(
                             .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            chatName.firstOrNull()?.uppercase() ?: "?",
-                            fontSize   = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = Color.White
-                        )
+                        Text(chatName.firstOrNull()?.uppercase() ?: "?",
+                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-
                     Spacer(modifier = Modifier.width(10.dp))
-
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            chatName,
-                            fontWeight = FontWeight.Bold,
-                            color      = Color.White,
-                            fontSize   = 15.sp,
-                            maxLines   = 1
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color(0xFF4CAF50))
-                            )
-                            Text(
-                                if (chatType == "group") "Grupo" else "Atendimento",
-                                fontSize = 11.sp,
-                                color    = Color.White.copy(alpha = 0.70f)
-                            )
+                        Text(chatName, fontWeight = FontWeight.Bold,
+                            color = Color.White, fontSize = 15.sp, maxLines = 1)
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(modifier = Modifier.size(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF4CAF50)))
+                            Text(if (chatType == "group") "Grupo" else "Atendimento",
+                                fontSize = 11.sp, color = Color.White.copy(alpha = 0.70f))
                         }
                     }
                 }
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
                 uiState.isLoading -> Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
                 uiState.messages.isEmpty() -> Box(
-                    Modifier.weight(1f).fillMaxWidth(), Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(WtcBluePale),
-                            contentAlignment = Alignment.Center
-                        ) {
+                    Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
+                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Chat, contentDescription = null,
                                 tint = WtcBlue, modifier = Modifier.size(36.dp))
                         }
-                        Text("Nenhuma mensagem ainda.",
-                            color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Seja o primeiro a enviar!",
-                            color = TextMuted, fontSize = 13.sp)
+                        Text("Nenhuma mensagem ainda.", color = TextPrimary,
+                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Seja o primeiro a enviar!", color = TextMuted, fontSize = 13.sp)
                     }
                 }
                 else -> {
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
+                        modifier = Modifier.weight(1f).fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         state = listState
                     ) {
                         items(uiState.messages) { message ->
                             val isOwn    = message.senderId == loggedInUserId
                             val imgMatch = IMG_REGEX.find(message.displayContent)
+                            val pdfMatch = PDF_REGEX.find(message.displayContent)
 
-                            if (imgMatch != null) {
-                                val objectKey = imgMatch.groupValues[1]
-                                val caption   = message.displayContent
-                                    .replace(imgMatch.value, "").trim()
-                                var imageUrl by remember(objectKey) { mutableStateOf("") }
-                                LaunchedEffect(objectKey) {
-                                    try {
-                                        val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
-                                        if (resp.isSuccessful) imageUrl = resp.body()?.url ?: ""
-                                    } catch (_: Exception) {}
-                                }
-                                ImageMessageBubble(
-                                    imageUrl          = imageUrl,
-                                    caption           = caption.ifBlank { null },
-                                    isFromCurrentUser = isOwn
-                                )
-                            } else {
-                                SwipeableMessageBubble(
-                                    message           = message,
-                                    isFromCurrentUser = isOwn,
-                                    senderName        = viewModel.getSenderName(message.senderId),
-                                    onReply           = { replyTo = it },
-                                    onEdit   = if (isOwn) ({ messageToEdit = message }) else null,
-                                    onDelete = if (isOwn) ({ messageToDelete = message }) else null
-                                ) {
-                                    MessageBubble(
+                            when {
+                                // ── Imagem ────────────────────────────────────
+                                imgMatch != null -> {
+                                    val objectKey = imgMatch.groupValues[1]
+                                    val caption   = message.displayContent
+                                        .replace(imgMatch.value, "").trim()
+                                    var imageUrl by remember(objectKey) { mutableStateOf("") }
+                                    LaunchedEffect(objectKey) {
+                                        try {
+                                            val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                            if (resp.isSuccessful) imageUrl = resp.body()?.url ?: ""
+                                        } catch (_: Exception) {}
+                                    }
+                                    SwipeableMessageBubble(
                                         message           = message,
                                         isFromCurrentUser = isOwn,
                                         senderName        = viewModel.getSenderName(message.senderId),
-                                        isImportant       = MessageActionsState.isImportant(message.id)
-                                    )
+                                        onReply           = { replyTo = it },
+                                        onEdit            = null,
+                                        onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                                    ) {
+                                        ImageMessageBubble(
+                                            imageUrl          = imageUrl,
+                                            caption           = caption.ifBlank { null },
+                                            isFromCurrentUser = isOwn
+                                        )
+                                    }
+                                }
+                                // ── PDF ───────────────────────────────────────
+                                pdfMatch != null -> {
+                                    val objectKey = pdfMatch.groupValues[1]
+                                    val fileName  = message.displayContent
+                                        .replace(pdfMatch.value, "").trim()
+                                        .ifBlank { objectKey.substringAfterLast("/") }
+                                    var pdfUrl by remember(objectKey) { mutableStateOf("") }
+                                    LaunchedEffect(objectKey) {
+                                        try {
+                                            val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                            if (resp.isSuccessful) pdfUrl = resp.body()?.url ?: ""
+                                        } catch (_: Exception) {}
+                                    }
+                                    SwipeableMessageBubble(
+                                        message           = message,
+                                        isFromCurrentUser = isOwn,
+                                        senderName        = viewModel.getSenderName(message.senderId),
+                                        onReply           = { replyTo = it },
+                                        onEdit            = null,
+                                        onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                                    ) {
+                                        PdfMessageBubble(
+                                            fileName          = fileName,
+                                            isFromCurrentUser = isOwn,
+                                            onOpen            = {
+                                                if (pdfUrl.isNotBlank()) {
+                                                    val intent = Intent(Intent.ACTION_VIEW,
+                                                        Uri.parse(pdfUrl))
+                                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    context.startActivity(intent)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                                // ── Texto normal ──────────────────────────────
+                                else -> {
+                                    SwipeableMessageBubble(
+                                        message           = message,
+                                        isFromCurrentUser = isOwn,
+                                        senderName        = viewModel.getSenderName(message.senderId),
+                                        onReply           = { replyTo = it },
+                                        onEdit   = if (isOwn) ({ messageToEdit = message }) else null,
+                                        onDelete = if (isOwn) ({ messageToDelete = message }) else null
+                                    ) {
+                                        MessageBubble(
+                                            message           = message,
+                                            isFromCurrentUser = isOwn,
+                                            senderName        = viewModel.getSenderName(message.senderId),
+                                            isImportant       = MessageActionsState.isImportant(message.id)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -236,10 +258,8 @@ fun ChatScreen(
             // ── Quote de reply ────────────────────────────────────────────────
             replyTo?.let { reply ->
                 Surface(modifier = Modifier.fillMaxWidth(), color = WtcBluePale) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
                         Surface(modifier = Modifier.width(3.dp).height(36.dp),
                             color = WtcBlue, shape = RoundedCornerShape(2.dp)) {}
                         Spacer(modifier = Modifier.width(10.dp))
@@ -247,8 +267,7 @@ fun ChatScreen(
                             Text("Respondendo a ${viewModel.getSenderName(reply.senderId)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = WtcBlue, fontWeight = FontWeight.SemiBold)
-                            Text(reply.displayContent,
-                                style = MaterialTheme.typography.bodySmall,
+                            Text(reply.displayContent, style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted, maxLines = 1)
                         }
                         IconButton(onClick = { replyTo = null }, modifier = Modifier.size(24.dp)) {
@@ -259,47 +278,48 @@ fun ChatScreen(
                 }
             }
 
-            // ── Preview de imagem ─────────────────────────────────────────────
-            pendingImageUri?.let { uri ->
+            // ── Preview do arquivo pendente ───────────────────────────────────
+            pendingFileUri?.let { uri ->
                 ImagePreviewBar(
                     imageUrl = uri,
+                    isPdf    = pendingIsPdf,
+                    fileName = pendingFileName,
                     onCancel = {
-                        pendingImageUri = null
-                        pendingImageKey = null
+                        pendingFileUri  = null
+                        pendingFileKey  = null
+                        pendingFileName = null
+                        pendingIsPdf    = false
                         uploadViewModel.reset()
                     }
                 )
             }
 
-            // ── Barra de input redesenhada ────────────────────────────────────
+            // ── Barra de input ────────────────────────────────────────────────
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
                     .shadow(8.dp, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
-                color             = Color.White,
-                shape             = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                tonalElevation    = 0.dp
+                color          = Color.White,
+                shape          = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                tonalElevation = 0.dp
             ) {
                 Row(
-                    modifier = Modifier
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                         .navigationBarsPadding(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Botão imagem
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(13.dp))
+                        modifier = Modifier.size(42.dp).clip(RoundedCornerShape(13.dp))
                             .background(WtcBluePale),
                         contentAlignment = Alignment.Center
                     ) {
                         ImagePickerButton(
                             uploadViewModel = uploadViewModel,
                             onImageReady    = { url, key ->
-                                pendingImageUri = url
-                                pendingImageKey = key
+                                pendingFileUri  = url
+                                pendingFileKey  = key
+                                pendingIsPdf    = uploadState.isPdf
+                                pendingFileName = uploadState.fileName
                             }
                         )
                     }
@@ -312,8 +332,7 @@ fun ChatScreen(
                             Text(
                                 if (replyTo != null) "Digite sua resposta..."
                                 else "Mensagem ou / para comandos...",
-                                color    = TextMuted.copy(alpha = 0.6f),
-                                fontSize = 14.sp
+                                color = TextMuted.copy(alpha = 0.6f), fontSize = 14.sp
                             )
                         },
                         shape  = RoundedCornerShape(22.dp),
@@ -325,12 +344,18 @@ fun ChatScreen(
                         )
                     )
 
-                    // Botão enviar
                     FilledIconButton(
                         onClick = {
                             val finalText = buildString {
-                                if (!pendingImageKey.isNullOrBlank())
-                                    append("[img:$pendingImageKey] ")
+                                if (!pendingFileKey.isNullOrBlank()) {
+                                    if (pendingIsPdf) {
+                                        append("[pdf:$pendingFileKey] ")
+                                        if (!pendingFileName.isNullOrBlank())
+                                            append(pendingFileName)
+                                    } else {
+                                        append("[img:$pendingFileKey] ")
+                                    }
+                                }
                                 if (replyTo != null)
                                     append("↩ ${viewModel.getSenderName(replyTo!!.senderId)}: \"${replyTo!!.content.take(30)}...\"\n")
                                 append(messageText)
@@ -339,12 +364,14 @@ fun ChatScreen(
                                 viewModel.sendMessage(finalText, chatId, chatType, loggedInUserId)
                                 messageText     = ""
                                 replyTo         = null
-                                pendingImageUri = null
-                                pendingImageKey = null
+                                pendingFileUri  = null
+                                pendingFileKey  = null
+                                pendingFileName = null
+                                pendingIsPdf    = false
                                 uploadViewModel.reset()
                             }
                         },
-                        enabled = messageText.isNotBlank() || pendingImageKey != null,
+                        enabled = messageText.isNotBlank() || pendingFileKey != null,
                         shape   = RoundedCornerShape(14.dp),
                         colors  = IconButtonDefaults.filledIconButtonColors(
                             containerColor         = WtcBlue,
@@ -360,7 +387,7 @@ fun ChatScreen(
         }
     }
 
-    // ── Dialog de avaliação ───────────────────────────────────────────────────────
+    // ── Dialog de avaliação ───────────────────────────────────────────────────
     if (uiState.showRatingDialog) {
         RatingDialog(
             onSubmit  = { stars, comment -> viewModel.submitRating(stars, comment) },
@@ -375,13 +402,11 @@ fun ChatScreen(
             onDismissRequest = { messageToEdit = null },
             title = { Text("Editar mensagem", fontWeight = FontWeight.Bold, color = TextPrimary) },
             text = {
-                OutlinedTextField(
-                    value = editText, onValueChange = { editText = it },
+                OutlinedTextField(value = editText, onValueChange = { editText = it },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Mensagem") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = WtcBlue, cursorColor = WtcBlue)
-                )
+                        focusedBorderColor = WtcBlue, cursorColor = WtcBlue))
             },
             confirmButton = {
                 Button(
@@ -443,26 +468,20 @@ fun MessageBubble(
     val textColor   = if (isFromCurrentUser) Color.White else TextPrimary
     val alignment   = if (isFromCurrentUser) Alignment.End else Alignment.Start
 
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalAlignment = alignment
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalAlignment = alignment) {
         if (!isFromCurrentUser && senderName.isNotEmpty()) {
             Text(senderName, style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold, color = WtcBlue,
                 modifier = Modifier.padding(start = 12.dp, bottom = 2.dp), fontSize = 11.sp)
         }
-
         Surface(
-            shape = RoundedCornerShape(
-                topStart    = 18.dp,
-                topEnd      = 18.dp,
+            shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp,
                 bottomEnd   = if (isFromCurrentUser) 4.dp else 18.dp,
-                bottomStart = if (isFromCurrentUser) 18.dp else 4.dp
-            ),
-            color            = if (isImportant) bubbleColor.copy(alpha = 0.85f) else bubbleColor,
-            shadowElevation  = if (isFromCurrentUser) 0.dp else 1.dp,
-            modifier         = Modifier.widthIn(max = 280.dp)
+                bottomStart = if (isFromCurrentUser) 18.dp else 4.dp),
+            color           = if (isImportant) bubbleColor.copy(alpha = 0.85f) else bubbleColor,
+            shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
+            modifier        = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
                 if (isImportant) {
@@ -478,15 +497,11 @@ fun MessageBubble(
                             else Color(0xFFE8B84B))
                     }
                 }
-
                 Text(message.displayContent, fontSize = 14.sp,
                     color = textColor, lineHeight = 20.sp)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     horizontalArrangement = Arrangement.End,
-                    verticalAlignment     = Alignment.CenterVertically
-                ) {
+                    verticalAlignment     = Alignment.CenterVertically) {
                     if (message.edited == true) {
                         Text("editada", fontSize = 9.sp, color = textColor.copy(alpha = 0.45f))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -515,9 +530,7 @@ private fun formatMessageTime(createdAt: String?): String {
         }
         val parts = timePart.split(":")
         if (parts.size >= 2) {
-            val hour   = parts[0].padStart(2, '0')
-            val minute = parts[1].padStart(2, '0')
-            "$hour:$minute"
+            "${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}"
         } else timePart
     } catch (e: Exception) { "" }
 }
