@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.viewmodel.ProfileViewModel
 import coil.compose.AsyncImage
 import java.util.Calendar
@@ -50,20 +51,31 @@ fun HomeClientScreen(
     onNavigateToConversationList: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCampaigns: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},   // ← novo
     onLogout: () -> Unit = {},
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var unreadCount      by remember { mutableIntStateOf(0) }
     val profileUiState   by profileViewModel.uiState.collectAsState()
     val avatarUrl        = profileUiState.avatarUrl
 
-    // Usa o nome do perfil carregado (sempre atualizado) com fallback para o parâmetro
     val displayName  = profileUiState.client?.name?.takeIf { it.isNotBlank() } ?: clientName
     val nameParts    = displayName.trim().split(" ")
     val firstName    = nameParts.firstOrNull() ?: ""
     val lastName     = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
 
-    LaunchedEffect(clientId) { profileViewModel.loadProfile(clientId) }
+    LaunchedEffect(clientId) {
+        profileViewModel.loadProfile(clientId)
+        // Polling de mensagens não lidas a cada 30 segundos
+        while (true) {
+            try {
+                val resp = RetrofitClient.instance.getUnreadCount()
+                unreadCount = resp.count
+            } catch (_: Exception) {}
+            kotlinx.coroutines.delay(30_000)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -85,7 +97,6 @@ fun HomeClientScreen(
                     )
                     .statusBarsPadding()
             ) {
-                // Detalhes geométricos decorativos
                 Box(
                     modifier = Modifier
                         .size(220.dp)
@@ -107,7 +118,6 @@ fun HomeClientScreen(
                         .padding(horizontal = 24.dp)
                         .padding(top = 28.dp, bottom = 36.dp)
                 ) {
-                    // Linha superior — saudação + logout
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -183,8 +193,8 @@ fun HomeClientScreen(
                             if (lastName.isNotBlank()) {
                                 Text(
                                     lastName,
-                                    fontSize   = 15.sp,
-                                    color      = Color.White.copy(alpha = 0.70f)
+                                    fontSize = 15.sp,
+                                    color    = Color.White.copy(alpha = 0.70f)
                                 )
                             }
                         }
@@ -229,11 +239,12 @@ fun HomeClientScreen(
 
                 // Card principal — Conversas (destaque)
                 PrimaryNavCard(
-                    title    = "Minhas Conversas",
-                    subtitle = "Chats 1:1 e mensagens de grupo",
-                    icon     = Icons.Default.Chat,
-                    gradient = Brush.linearGradient(listOf(WtcBlue, WtcBlueSoft)),
-                    onClick  = onNavigateToConversationList
+                    title       = "Minhas Conversas",
+                    subtitle    = "Chats 1:1 e mensagens de grupo",
+                    icon        = Icons.Default.Chat,
+                    gradient    = Brush.linearGradient(listOf(WtcBlue, WtcBlueSoft)),
+                    onClick     = onNavigateToConversationList,
+                    badgeCount  = unreadCount
                 )
 
                 // Cards secundários lado a lado
@@ -260,6 +271,16 @@ fun HomeClientScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                // ── Card Meus Atendimentos ────────────────────────────────────
+                ClientNavCard(
+                    title    = "Meus Atendimentos",
+                    subtitle = "Histórico de atendimentos encerrados",
+                    icon     = Icons.Default.HeadsetMic,
+                    accent   = Color(0xFF1A7A5E),
+                    bgAccent = Color(0xFFEDF7F2),
+                    onClick  = onNavigateToHistory
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -301,7 +322,8 @@ fun HomeClientScreen(
 @Composable
 fun PrimaryNavCard(
     title: String, subtitle: String, icon: ImageVector,
-    gradient: Brush, onClick: () -> Unit
+    gradient: Brush, onClick: () -> Unit,
+    badgeCount: Int = 0
 ) {
     Card(
         onClick   = onClick,
@@ -341,8 +363,26 @@ fun PrimaryNavCard(
                     Text(subtitle, fontSize = 12.sp, color = Color.White.copy(alpha = 0.72f),
                         modifier = Modifier.padding(top = 2.dp))
                 }
-                Icon(Icons.Default.ArrowForward, contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                // Badge de não lidas
+                if (badgeCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE53935)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (badgeCount > 99) "99+" else badgeCount.toString(),
+                            fontSize   = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.White
+                        )
+                    }
+                } else {
+                    Icon(Icons.Default.ArrowForward, contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
