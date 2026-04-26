@@ -51,7 +51,8 @@ fun HomeClientScreen(
     onNavigateToConversationList: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCampaigns: () -> Unit = {},
-    onNavigateToHistory: () -> Unit = {},   // ← novo
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToGallery: () -> Unit = {},   // ← novo
     onLogout: () -> Unit = {},
     profileViewModel: ProfileViewModel = viewModel()
 ) {
@@ -280,6 +281,16 @@ fun HomeClientScreen(
                     accent   = Color(0xFF1A7A5E),
                     bgAccent = Color(0xFFEDF7F2),
                     onClick  = onNavigateToHistory
+                )
+
+                // ── Card Galeria ──────────────────────────────────────────────
+                ClientNavCard(
+                    title    = "Galeria",
+                    subtitle = "Imagens e documentos trocados",
+                    icon     = Icons.Default.PhotoLibrary,
+                    accent   = WtcBlue,
+                    bgAccent = WtcBluePale,
+                    onClick  = onNavigateToGallery
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
