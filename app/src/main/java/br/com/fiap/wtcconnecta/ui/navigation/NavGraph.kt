@@ -27,6 +27,7 @@ import br.com.fiap.wtcconnecta.ui.screens.operator.HomeOperatorScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.OperatorDashboardScreen
 import br.com.fiap.wtcconnecta.ui.screens.profile.ProfileScreen
 import br.com.fiap.wtcconnecta.ui.screens.client.ClientAttendanceHistoryScreen
+import br.com.fiap.wtcconnecta.ui.screens.client.ClientMediaGalleryScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.AttendanceQueueScreen
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.LoginResult
@@ -63,6 +64,9 @@ sealed class Routes(val route: String) {
     }
     object Chat : Routes("chat/{chatId}/{chatName}/{chatType}")
     object AttendanceHistory : Routes("attendance_history")
+    object MediaGallery : Routes("media_gallery/{clientId}") {
+        fun createRoute(clientId: String) = "media_gallery/$clientId"
+    }
 }
 
 @Composable
@@ -165,6 +169,7 @@ fun NavGraph(
                     onNavigateToProfile   = { navController.navigate(Routes.Profile.createRoute(clientId)) },
                     onNavigateToCampaigns = { navController.navigate(Routes.CampaignExpress.route) },
                     onNavigateToHistory   = { navController.navigate(Routes.AttendanceHistory.route) },
+                    onNavigateToGallery   = { navController.navigate(Routes.MediaGallery.createRoute(clientId)) },
                     onLogout = {
                         mainViewModel.logout()
                         AuthRepository().logout()
@@ -259,6 +264,14 @@ fun NavGraph(
         composable(Routes.AttendanceHistory.route) {
             ClientAttendanceHistoryScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.MediaGallery.route) { backStackEntry ->
+            val clientId = backStackEntry.arguments?.getString("clientId") ?: ""
+            ClientMediaGalleryScreen(
+                clientId = clientId,
+                onBack   = { navController.popBackStack() }
             )
         }
 
