@@ -1,5 +1,7 @@
 package br.com.fiap.wtcconnecta.ui.screens.operator
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,15 +32,21 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import br.com.fiap.wtcconnecta.data.model.Division
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 import br.com.fiap.wtcconnecta.ui.screens.client.CampaignExpressCard
 import br.com.fiap.wtcconnecta.data.model.Group
 import br.com.fiap.wtcconnecta.data.model.Message
 import br.com.fiap.wtcconnecta.data.model.Note
 import br.com.fiap.wtcconnecta.data.model.TaskRequest
+import br.com.fiap.wtcconnecta.ui.components.ImageMessageBubble
+import br.com.fiap.wtcconnecta.ui.components.ImagePickerButton
+import br.com.fiap.wtcconnecta.ui.components.ImagePreviewBar
 import br.com.fiap.wtcconnecta.ui.components.MessageActionsState
+import br.com.fiap.wtcconnecta.ui.components.PdfMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.SwipeableMessageBubble
 import br.com.fiap.wtcconnecta.ui.components.TasksBottomSheet
 import br.com.fiap.wtcconnecta.viewmodel.ClientDetailViewModel
+import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
 import br.com.fiap.wtcconnecta.viewmodel.TaskViewModel
 import coil.compose.AsyncImage
 
@@ -48,6 +57,9 @@ private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
+
+private val IMG_REGEX = Regex("""\[img:(images/[^\]]+)]""")
+private val PDF_REGEX = Regex("""\[pdf:(images/[^\]]+)]""")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -92,11 +104,8 @@ fun ClientDetailScreen(
                             contentDescription = "Voltar", tint = Color.White)
                     }
 
-                    // ── Avatar: foto se tiver, inicial se não tiver ───────────
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
+                        modifier = Modifier.size(42.dp).clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -106,16 +115,12 @@ fun ClientDetailScreen(
                                 model              = avatarUrl,
                                 contentDescription = "Avatar de ${uiState.client?.name}",
                                 contentScale       = ContentScale.Crop,
-                                modifier           = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
+                                modifier           = Modifier.size(42.dp).clip(CircleShape)
                             )
                         } else {
                             Text(
                                 (uiState.client?.name ?: "?").firstOrNull()?.uppercase() ?: "?",
-                                fontSize   = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color      = Color.White
+                                fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White
                             )
                         }
                     }
@@ -321,25 +326,20 @@ fun ClientProfileSection(
             Text("Tags", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                 color = TextPrimary, modifier = Modifier.padding(bottom = 6.dp))
             if (tags.isNotEmpty()) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                FlowRow(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement   = Arrangement.spacedBy(6.dp)
-                ) {
+                    verticalArrangement   = Arrangement.spacedBy(6.dp)) {
                     tags.forEach { tag ->
                         Surface(color = WtcBlue, shape = RoundedCornerShape(20.dp)) {
-                            Row(
-                                modifier = Modifier.padding(start = 10.dp, end = 4.dp,
-                                    top = 4.dp, bottom = 4.dp),
+                            Row(modifier = Modifier.padding(start = 10.dp, end = 4.dp,
+                                top = 4.dp, bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(tag, fontSize = 12.sp, color = Color.White,
                                     fontWeight = FontWeight.Medium)
-                                IconButton(
-                                    onClick = { tags = (tags - tag).toMutableList(); saved = false },
-                                    modifier = Modifier.size(18.dp)
-                                ) {
+                                IconButton(onClick = {
+                                    tags = (tags - tag).toMutableList(); saved = false },
+                                    modifier = Modifier.size(18.dp)) {
                                     Icon(Icons.Default.Close, contentDescription = "Remover tag",
                                         tint = Color.White.copy(alpha = 0.8f),
                                         modifier = Modifier.size(12.dp))
@@ -349,32 +349,23 @@ fun ClientProfileSection(
                     }
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
+            Row(modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = tagInput,
+                verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(value = tagInput,
                     onValueChange = { tagInput = it.lowercase().replace(" ", "_") },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Nova tag...", color = TextMuted.copy(alpha = 0.6f)) },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp), singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
-                        cursorColor = WtcBlue)
-                )
-                IconButton(
-                    onClick = {
-                        val t = tagInput.trim()
-                        if (t.isNotBlank() && !tags.contains(t)) {
-                            tags = (tags + t).toMutableList(); saved = false
-                        }
-                        tagInput = ""
-                    },
-                    modifier = Modifier.size(48.dp).background(WtcBlue, RoundedCornerShape(12.dp))
-                ) {
+                        cursorColor = WtcBlue))
+                IconButton(onClick = {
+                    val t = tagInput.trim()
+                    if (t.isNotBlank() && !tags.contains(t)) {
+                        tags = (tags + t).toMutableList(); saved = false }
+                    tagInput = "" },
+                    modifier = Modifier.size(48.dp).background(WtcBlue, RoundedCornerShape(12.dp))) {
                     Icon(Icons.Default.Add, contentDescription = "Adicionar tag", tint = Color.White)
                 }
             }
@@ -391,16 +382,13 @@ fun ClientProfileSection(
                     Text("Perfil atualizado!", color = WtcBlue, fontWeight = FontWeight.Medium)
                 }
             }
-            Button(
-                onClick = {
-                    val divId = selectedDivision?.id ?: currentDivisionId ?: ""
-                    val grpId = selectedGroup?.id ?: currentGroupId ?: ""
-                    onSave(divId, grpId, tags.toList()); saved = true
-                },
+            Button(onClick = {
+                val divId = selectedDivision?.id ?: currentDivisionId ?: ""
+                val grpId = selectedGroup?.id ?: currentGroupId ?: ""
+                onSave(divId, grpId, tags.toList()); saved = true },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
-            ) {
+                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Salvar alterações", fontWeight = FontWeight.SemiBold)
@@ -436,19 +424,16 @@ fun NotesSection(
                 trailingIcon = {
                     IconButton(onClick = {
                         if (newNoteText.isNotBlank()) {
-                            viewModel.addNote(newNoteText, clientId); newNoteText = ""
-                        }
+                            viewModel.addNote(newNoteText, clientId); newNoteText = "" }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = WtcBlue)
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor      = WtcBlue,
-                    unfocusedBorderColor    = WtcBlueHint,
+                    focusedBorderColor      = WtcBlue, unfocusedBorderColor    = WtcBlueHint,
                     cursorColor             = WtcBlue,
                     focusedContainerColor   = WtcBluePale.copy(alpha = 0.4f),
-                    unfocusedContainerColor = Color(0xFFFAFCFE)
-                )
+                    unfocusedContainerColor = Color(0xFFFAFCFE))
             )
         }
     }
@@ -464,19 +449,26 @@ fun ChatSection(
     getSenderName: (String) -> String,
     onCloseAttendance: () -> Unit = {}
 ) {
+    val context         = LocalContext.current
     var messageText     by remember { mutableStateOf("") }
     var suggestions     by remember { mutableStateOf<List<String>>(emptyList()) }
     var replyTo         by remember { mutableStateOf<Message?>(null) }
     var showTasks       by remember { mutableStateOf(false) }
     var showCloseDialog by remember { mutableStateOf(false) }
+    var messageToDelete by remember { mutableStateOf<Message?>(null) }
     val taskCount = MessageActionsState.tasks.size
 
+    val uploadViewModel: ImageUploadViewModel = viewModel()
+    val uploadState by uploadViewModel.uiState.collectAsState()
+    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileName by remember { mutableStateOf<String?>(null) }
+    var pendingIsPdf    by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF0F6FA))) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+            verticalAlignment = Alignment.CenterVertically) {
             if (taskCount > 0) {
                 TextButton(onClick = { showTasks = true }) {
                     Icon(Icons.Default.TaskAlt, contentDescription = null,
@@ -484,13 +476,9 @@ fun ChatSection(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("$taskCount tarefa(s)", fontSize = 12.sp, color = WtcBlue)
                 }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-            TextButton(
-                onClick = { showCloseDialog = true },
-                colors  = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE65100))
-            ) {
+            } else { Spacer(modifier = Modifier.weight(1f)) }
+            TextButton(onClick = { showCloseDialog = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFE65100))) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null,
                     modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -503,21 +491,94 @@ fun ChatSection(
             reverseLayout = true
         ) {
             items(messages.reversed()) { message ->
-                SwipeableMessageBubble(
-                    message           = message,
-                    isFromCurrentUser = viewModel.isFromOperator(message.senderId),
-                    senderName        = getSenderName(message.senderId),
-                    clientId          = clientId,
-                    clientName        = clientName,
-                    onReply           = { replyTo = it },
-                    onCreateTask      = { request: TaskRequest -> taskViewModel.createTask(request) }
-                ) {
-                    MessageBubble(
-                        message           = message,
-                        isFromCurrentUser = viewModel.isFromOperator(message.senderId),
-                        senderName        = getSenderName(message.senderId),
-                        isImportant       = MessageActionsState.isImportant(message.id)
-                    )
+                val isOwn    = viewModel.isFromOperator(message.senderId)
+                val imgMatch = IMG_REGEX.find(message.displayContent)
+                val pdfMatch = PDF_REGEX.find(message.displayContent)
+
+                when {
+                    // ── Imagem ────────────────────────────────────────────────
+                    imgMatch != null -> {
+                        val objectKey = imgMatch.groupValues[1]
+                        val caption   = message.displayContent.replace(imgMatch.value, "").trim()
+                        var imageUrl  by remember(objectKey) { mutableStateOf("") }
+                        LaunchedEffect(objectKey) {
+                            try {
+                                val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                if (resp.isSuccessful) imageUrl = resp.body()?.url ?: ""
+                            } catch (_: Exception) {}
+                        }
+                        SwipeableMessageBubble(
+                            message           = message,
+                            isFromCurrentUser = isOwn,
+                            senderName        = getSenderName(message.senderId),
+                            clientId          = clientId,
+                            clientName        = clientName,
+                            onReply           = { replyTo = it },
+                            onCreateTask      = { request: TaskRequest -> taskViewModel.createTask(request) },
+                            onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                        ) {
+                            ImageMessageBubble(
+                                imageUrl          = imageUrl,
+                                caption           = caption.ifBlank { null },
+                                isFromCurrentUser = isOwn
+                            )
+                        }
+                    }
+                    // ── PDF ───────────────────────────────────────────────────
+                    pdfMatch != null -> {
+                        val objectKey = pdfMatch.groupValues[1]
+                        val fileName  = message.displayContent
+                            .replace(pdfMatch.value, "").trim()
+                            .ifBlank { objectKey.substringAfterLast("/") }
+                        var pdfUrl by remember(objectKey) { mutableStateOf("") }
+                        LaunchedEffect(objectKey) {
+                            try {
+                                val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                if (resp.isSuccessful) pdfUrl = resp.body()?.url ?: ""
+                            } catch (_: Exception) {}
+                        }
+                        SwipeableMessageBubble(
+                            message           = message,
+                            isFromCurrentUser = isOwn,
+                            senderName        = getSenderName(message.senderId),
+                            clientId          = clientId,
+                            clientName        = clientName,
+                            onReply           = { replyTo = it },
+                            onCreateTask      = { request: TaskRequest -> taskViewModel.createTask(request) },
+                            onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                        ) {
+                            PdfMessageBubble(
+                                fileName          = fileName,
+                                isFromCurrentUser = isOwn,
+                                onOpen            = {
+                                    if (pdfUrl.isNotBlank()) {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    // ── Texto normal ──────────────────────────────────────────
+                    else -> {
+                        SwipeableMessageBubble(
+                            message           = message,
+                            isFromCurrentUser = isOwn,
+                            senderName        = getSenderName(message.senderId),
+                            clientId          = clientId,
+                            clientName        = clientName,
+                            onReply           = { replyTo = it },
+                            onCreateTask      = { request: TaskRequest -> taskViewModel.createTask(request) }
+                        ) {
+                            MessageBubble(
+                                message           = message,
+                                isFromCurrentUser = isOwn,
+                                senderName        = getSenderName(message.senderId),
+                                isImportant       = MessageActionsState.isImportant(message.id)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -532,8 +593,7 @@ fun ChatSection(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Respondendo", fontSize = 11.sp,
                             color = WtcBlue, fontWeight = FontWeight.SemiBold)
-                        Text(reply.displayContent, fontSize = 12.sp,
-                            color = TextMuted, maxLines = 1)
+                        Text(reply.displayContent, fontSize = 12.sp, color = TextMuted, maxLines = 1)
                     }
                     IconButton(onClick = { replyTo = null }, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.Close, contentDescription = null,
@@ -544,53 +604,94 @@ fun ChatSection(
         }
 
         AnimatedVisibility(suggestions.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyRow(modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(suggestions) { command ->
-                    AssistChip(
-                        onClick = { messageText = command; suggestions = emptyList() },
-                        label   = { Text(command, fontSize = 12.sp) },
+                    AssistChip(onClick = { messageText = command; suggestions = emptyList() },
+                        label = { Text(command, fontSize = 12.sp) },
                         leadingIcon = { Icon(Icons.Default.Bolt, contentDescription = null,
                             modifier = Modifier.size(14.dp)) },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = WtcBluePale, labelColor = WtcBlue)
-                    )
+                            containerColor = WtcBluePale, labelColor = WtcBlue))
                 }
             }
         }
 
+        // ── Preview do arquivo pendente ───────────────────────────────────────
+        pendingFileUri?.let { uri ->
+            ImagePreviewBar(
+                imageUrl = uri,
+                isPdf    = pendingIsPdf,
+                fileName = pendingFileName,
+                onCancel = {
+                    pendingFileUri  = null
+                    pendingFileKey  = null
+                    pendingFileName = null
+                    pendingIsPdf    = false
+                    uploadViewModel.reset()
+                }
+            )
+        }
+
         Surface(color = Color.White, shadowElevation = 4.dp) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically) {
+
+                // ── Botão anexar arquivo ──────────────────────────────────────
+                Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(13.dp))
+                    .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                    ImagePickerButton(
+                        uploadViewModel = uploadViewModel,
+                        onImageReady    = { url, key ->
+                            pendingFileUri  = url
+                            pendingFileKey  = key
+                            pendingIsPdf    = key.endsWith(".pdf", ignoreCase = true)
+                            pendingFileName = uploadState.fileName
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 OutlinedTextField(
                     value = messageText,
-                    onValueChange = {
-                        messageText = it
-                        suggestions = viewModel.getCommandSuggestions(it)
-                    },
+                    onValueChange = { messageText = it; suggestions = viewModel.getCommandSuggestions(it) },
                     modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                     placeholder = { Text("Mensagem ou / para comandos...",
                         color = TextMuted.copy(alpha = 0.6f), fontSize = 13.sp) },
                     shape = RoundedCornerShape(22.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor      = WtcBlue,
-                        unfocusedBorderColor    = WtcBlueHint,
+                        focusedBorderColor      = WtcBlue, unfocusedBorderColor    = WtcBlueHint,
                         focusedContainerColor   = Color(0xFFF0F6FA),
-                        unfocusedContainerColor = Color(0xFFF0F6FA)
-                    )
+                        unfocusedContainerColor = Color(0xFFF0F6FA))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 FilledIconButton(
                     onClick = {
-                        if (messageText.isNotBlank()) {
-                            viewModel.sendMessage(messageText, clientId, currentOperatorId)
-                            messageText = ""; suggestions = emptyList()
+                        val finalText = buildString {
+                            if (!pendingFileKey.isNullOrBlank()) {
+                                if (pendingIsPdf) {
+                                    append("[pdf:$pendingFileKey] ")
+                                    if (!pendingFileName.isNullOrBlank()) append(pendingFileName)
+                                } else {
+                                    append("[img:$pendingFileKey] ")
+                                }
+                            }
+                            append(messageText)
+                        }
+                        if (finalText.isNotBlank()) {
+                            viewModel.sendMessage(finalText, clientId, currentOperatorId)
+                            messageText     = ""
+                            suggestions     = emptyList()
+                            pendingFileUri  = null
+                            pendingFileKey  = null
+                            pendingFileName = null
+                            pendingIsPdf    = false
+                            uploadViewModel.reset()
                         }
                     },
+                    enabled = messageText.isNotBlank() || pendingFileKey != null,
                     shape  = RoundedCornerShape(50),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = WtcBlue)
                 ) {
@@ -606,21 +707,52 @@ fun ChatSection(
     if (showCloseDialog) {
         AlertDialog(
             onDismissRequest = { showCloseDialog = false },
-            title = { Text("Encerrar atendimento?",
-                fontWeight = FontWeight.Bold, color = TextPrimary) },
-            text  = { Text(
-                "O cliente receberá uma mensagem de encerramento e o atendimento " +
-                        "voltará para a fila caso entre em contato novamente.",
+            title = { Text("Encerrar atendimento?", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text  = { Text("O cliente receberá uma mensagem de encerramento e o atendimento " +
+                    "voltará para a fila caso entre em contato novamente.",
                 color = TextMuted, fontSize = 13.sp) },
             confirmButton = {
-                Button(
-                    onClick = { showCloseDialog = false; onCloseAttendance() },
-                    colors  = ButtonDefaults.buttonColors(containerColor = WtcBlue),
-                    shape   = RoundedCornerShape(10.dp)
-                ) { Text("Encerrar", fontWeight = FontWeight.SemiBold) }
+                Button(onClick = { showCloseDialog = false; onCloseAttendance() },
+                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue),
+                    shape  = RoundedCornerShape(10.dp)) {
+                    Text("Encerrar", fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showCloseDialog = false }) {
+                    Text("Cancelar", color = TextMuted)
+                }
+            }
+        )
+    }
+
+    // ── Dialog excluir mensagem ───────────────────────────────────────────────
+    messageToDelete?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { messageToDelete = null },
+            title = { Text("Excluir mensagem?", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = {
+                Column {
+                    Text("Esta ação não pode ser desfeita.", color = TextMuted, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(color = WtcBluePale, shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(msg.displayContent, style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(10.dp), maxLines = 3, color = TextPrimary)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteMessage(msg.id, clientId)
+                    messageToDelete = null
+                }) {
+                    Text("Excluir", color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { messageToDelete = null }) {
                     Text("Cancelar", color = TextMuted)
                 }
             }
@@ -645,20 +777,16 @@ fun MessageBubble(
             Text(senderName, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                 color = WtcBlue, modifier = Modifier.padding(start = 12.dp, bottom = 2.dp))
         }
-        Surface(
-            color = bubbleColor,
+        Surface(color = bubbleColor,
             shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp,
                 bottomEnd   = if (isFromCurrentUser) 4.dp else 18.dp,
                 bottomStart = if (isFromCurrentUser) 18.dp else 4.dp),
             shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
-            modifier = Modifier.widthIn(max = 280.dp)
-        ) {
+            modifier = Modifier.widthIn(max = 280.dp)) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
-                Text(message.displayContent, fontSize = 14.sp,
-                    color = textColor, lineHeight = 20.sp)
+                Text(message.displayContent, fontSize = 14.sp, color = textColor, lineHeight = 20.sp)
                 Text(formatTime(message.createdAt), fontSize = 10.sp,
-                    color = textColor.copy(alpha = 0.55f),
-                    textAlign = TextAlign.End,
+                    color = textColor.copy(alpha = 0.55f), textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
             }
         }
@@ -668,14 +796,12 @@ fun MessageBubble(
 @Composable
 fun ClientShortcutChip(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
+    label: String, onClick: () -> Unit
 ) {
     Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = WtcBluePale) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null,
-                tint = WtcBlue, modifier = Modifier.size(14.dp))
+            Icon(icon, contentDescription = null, tint = WtcBlue, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(label, fontSize = 12.sp, color = WtcBlue)
         }
@@ -702,8 +828,7 @@ private fun formatCampaignDate(createdAt: String?): String {
 @Composable
 fun EditNoteDialog(note: Note, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var updatedText by remember { mutableStateOf(note.text) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
+    AlertDialog(onDismissRequest = onDismiss,
         title = { Text("Editar anotação", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
             OutlinedTextField(value = updatedText, onValueChange = { updatedText = it },
@@ -716,16 +841,13 @@ fun EditNoteDialog(note: Note, onDismiss: () -> Unit, onConfirm: (String) -> Uni
             Button(onClick = { onConfirm(updatedText) }, shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) { Text("Salvar") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
     )
 }
 
 @Composable
 fun DeleteConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
+    AlertDialog(onDismissRequest = onDismiss,
         title = { Text("Excluir anotação?", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text  = { Text("Tem certeza que deseja excluir esta anotação?", color = TextMuted) },
         confirmButton = {
@@ -734,20 +856,15 @@ fun DeleteConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                     fontWeight = FontWeight.SemiBold)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
     )
 }
 
 @Composable
 fun NoteItem(note: Note, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
-    Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(note.text, fontSize = 14.sp, color = TextPrimary, lineHeight = 20.sp)
             Spacer(modifier = Modifier.height(8.dp))
@@ -790,11 +907,9 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-    ) {
+        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)) {
         item {
             Text("CAMPANHAS — ${campaigns.size}", fontSize = 11.sp,
                 fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp,
@@ -837,16 +952,12 @@ fun ClientCampaignsSection(campaigns: List<Message>) {
     }
 
     selectedCampaign?.let { campaign ->
-        ModalBottomSheet(
-            onDismissRequest = { selectedCampaign = null },
-            containerColor   = Color(0xFFF5FAFD),
-            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-                    .padding(horizontal = 16.dp).padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+        ModalBottomSheet(onDismissRequest = { selectedCampaign = null },
+            containerColor = Color(0xFFF5FAFD),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+            Column(modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Detalhes da campanha", fontSize = 16.sp,
                     fontWeight = FontWeight.Bold, color = TextPrimary)
                 HorizontalDivider(color = Color(0xFFF0F6FA))
