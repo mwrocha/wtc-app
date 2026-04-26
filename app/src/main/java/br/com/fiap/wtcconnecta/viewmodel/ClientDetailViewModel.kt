@@ -314,6 +314,21 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         return slashCommands.keys.filter { it.startsWith(query, ignoreCase = true) }
     }
 
+    fun deleteMessage(messageId: String, clientId: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.deleteMessage(messageId)
+                if (response.isSuccessful) {
+                    _uiState.update { state ->
+                        state.copy(messages = state.messages.filter { it.id != messageId })
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ClientDetailVM", "Erro ao excluir mensagem: ${e.message}")
+            }
+        }
+    }
+
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
     private suspend fun <T> safeApiCall(apiCall: suspend () -> T): T? {
