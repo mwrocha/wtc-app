@@ -26,6 +26,7 @@ import br.com.fiap.wtcconnecta.ui.screens.operator.ClientDetailScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.HomeOperatorScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.OperatorDashboardScreen
 import br.com.fiap.wtcconnecta.ui.screens.profile.ProfileScreen
+import br.com.fiap.wtcconnecta.ui.screens.client.ClientAttendanceHistoryScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.AttendanceQueueScreen
 import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.LoginResult
@@ -61,6 +62,7 @@ sealed class Routes(val route: String) {
         fun createRoute(clientId: String) = "client_detail/$clientId"
     }
     object Chat : Routes("chat/{chatId}/{chatName}/{chatType}")
+    object AttendanceHistory : Routes("attendance_history")
 }
 
 @Composable
@@ -162,6 +164,7 @@ fun NavGraph(
                     },
                     onNavigateToProfile   = { navController.navigate(Routes.Profile.createRoute(clientId)) },
                     onNavigateToCampaigns = { navController.navigate(Routes.CampaignExpress.route) },
+                    onNavigateToHistory   = { navController.navigate(Routes.AttendanceHistory.route) },
                     onLogout = {
                         mainViewModel.logout()
                         AuthRepository().logout()
@@ -253,6 +256,11 @@ fun NavGraph(
             )
         }
 
+        composable(Routes.AttendanceHistory.route) {
+            ClientAttendanceHistoryScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
 
         composable(Routes.AttendanceQueue.route) {
             AttendanceQueueScreen(
