@@ -314,4 +314,7 @@ interface ApiService {
 
     @GET("api/ratings/my-stats")
     suspend fun getMyRatingStats(): Response<Map<String, Any>>
+
+    @GET("api/ratings/my-history")
+    suspend fun getMyAttendanceHistory(): Response<List<Map<String, Any>>>
 }
