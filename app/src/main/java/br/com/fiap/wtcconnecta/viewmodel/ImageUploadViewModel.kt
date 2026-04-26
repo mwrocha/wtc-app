@@ -17,6 +17,8 @@ data class ImageUploadUiState(
     val isUploading: Boolean = false,
     val uploadedUrl: String? = null,
     val uploadedKey: String? = null,
+    val isPdf: Boolean = false,
+    val fileName: String? = null,
     val error: String? = null
 )
 
@@ -26,17 +28,14 @@ class ImageUploadViewModel : ViewModel() {
     val uiState = _uiState.asStateFlow()
 
     /**
-     * Faz upload de uma imagem selecionada pelo usuário.
-     * [uri]     — URI retornada pelo picker de imagens do Android
-     * [context] — necessário para abrir o InputStream da URI
-     * [onSuccess] — callback com a URL pré-assinada após upload bem-sucedido
+     * Faz upload de imagem ou PDF.
+     * Detecta o tipo automaticamente pelo mimeType da URI.
      */
-    fun uploadImage(uri: Uri, context: Context, onSuccess: (url: String, key: String) -> Unit) {
+    fun uploadFile(uri: Uri, context: Context, onSuccess: (url: String, key: String) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploading = true, error = null) }
 
             try {
-                // Lê o arquivo a partir da URI
                 val contentResolver = context.contentResolver
                 val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
                 val inputStream = contentResolver.openInputStream(uri)
@@ -44,19 +43,29 @@ class ImageUploadViewModel : ViewModel() {
                 val bytes = inputStream.readBytes()
                 inputStream.close()
 
-                // Monta o multipart
-                val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val extension = when (mimeType) {
-                    "image/png"  -> "png"
-                    "image/gif"  -> "gif"
-                    "image/webp" -> "webp"
-                    else         -> "jpg"
-                }
-                val part = MultipartBody.Part.createFormData(
-                    "file", "upload.$extension", requestBody
-                )
+                val isPdf = mimeType == "application/pdf"
 
-                // Chama o endpoint
+                val extension = when (mimeType) {
+                    "application/pdf" -> "pdf"
+                    "image/png"       -> "png"
+                    "image/gif"       -> "gif"
+                    "image/webp"      -> "webp"
+                    else              -> "jpg"
+                }
+
+                // Tenta obter o nome do arquivo original
+                val fileName = try {
+                    val cursor = context.contentResolver.query(uri, null, null, null, null)
+                    cursor?.use {
+                        val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        it.moveToFirst()
+                        if (nameIndex >= 0) it.getString(nameIndex) else "arquivo.$extension"
+                    } ?: "arquivo.$extension"
+                } catch (_: Exception) { "arquivo.$extension" }
+
+                val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                val part = MultipartBody.Part.createFormData("file", fileName, requestBody)
+
                 val response = RetrofitClient.instance.uploadImage(part)
                 if (response.isSuccessful) {
                     val body = response.body()!!
@@ -64,25 +73,30 @@ class ImageUploadViewModel : ViewModel() {
                         it.copy(
                             isUploading = false,
                             uploadedUrl = body.url,
-                            uploadedKey = body.objectKey
+                            uploadedKey = body.objectKey,
+                            isPdf       = isPdf,
+                            fileName    = fileName
                         )
                     }
                     onSuccess(body.url, body.objectKey)
                 } else {
                     val msg = when (response.code()) {
                         400  -> "Tipo ou tamanho de arquivo inválido."
-                        413  -> "Arquivo muito grande (máx 5 MB)."
+                        413  -> "Arquivo muito grande (máx 10 MB)."
                         else -> "Erro ao fazer upload (${response.code()})."
                     }
                     _uiState.update { it.copy(isUploading = false, error = msg) }
                 }
 
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(isUploading = false, error = "Erro: ${e.message}")
-                }
+                _uiState.update { it.copy(isUploading = false, error = "Erro: ${e.message}") }
             }
         }
+    }
+
+    // Mantido para compatibilidade com código existente
+    fun uploadImage(uri: Uri, context: Context, onSuccess: (url: String, key: String) -> Unit) {
+        uploadFile(uri, context, onSuccess)
     }
 
     fun clearError() = _uiState.update { it.copy(error = null) }
