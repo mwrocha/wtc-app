@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.ui.components.AvatarPicker
 import br.com.fiap.wtcconnecta.viewmodel.ProfileViewModel
+import br.com.fiap.wtcconnecta.ui.components.CpfVisualTransformation
+import br.com.fiap.wtcconnecta.ui.components.PhoneVisualTransformation
+import br.com.fiap.wtcconnecta.ui.components.applyCpfMask
+import br.com.fiap.wtcconnecta.ui.components.applyPhoneMask
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
@@ -48,32 +52,31 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    var showPasswordDialog      by remember { mutableStateOf(false) }
-    var showEmailDialog         by remember { mutableStateOf(false) }
-    var showGroupRequestDialog  by remember { mutableStateOf(false) }
-    var showSaveDialog          by remember { mutableStateOf(false) }
-    var isEditing               by remember { mutableStateOf(false) }
-    var editedName              by remember { mutableStateOf("") }
+    var showPasswordDialog       by remember { mutableStateOf(false) }
+    var showEmailDialog          by remember { mutableStateOf(false) }
+    var showPhoneDialog          by remember { mutableStateOf(false) }
+    var showCpfDialog            by remember { mutableStateOf(false) }
+    var showCompanyRequestDialog by remember { mutableStateOf(false) }
+    var showGroupRequestDialog   by remember { mutableStateOf(false) }
+    var showSaveDialog           by remember { mutableStateOf(false) }
+    var isEditing                by remember { mutableStateOf(false) }
+    var editedName               by remember { mutableStateOf("") }
 
     LaunchedEffect(clientId) { viewModel.loadProfile(clientId) }
     LaunchedEffect(uiState.client) {
-        if (editedName.isBlank()) editedName = uiState.client?.name ?: ""
+        uiState.client?.let { c ->
+            if (editedName.isBlank()) editedName = c.name
+        }
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.success) {
-        if (uiState.success) {
-            viewModel.clearSuccess()
-            isEditing = false
-        }
+        if (uiState.success) { viewModel.clearSuccess(); isEditing = false }
     }
     LaunchedEffect(Unit) {
         viewModel.navigateBack.collect {
-            snackbarHostState.showSnackbar(
-                message  = "Perfil atualizado!",
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(message = "Perfil atualizado!", duration = SnackbarDuration.Short)
             onProfileUpdated()
         }
     }
@@ -86,15 +89,41 @@ fun ProfileScreen(
             viewModel.clearEmailState(); showEmailDialog = false; onNavigateBack()
         }
     }
-    LaunchedEffect(uiState.avatarError) {
-        uiState.avatarError?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearAvatarError()
+    LaunchedEffect(uiState.phoneSuccess) {
+        if (uiState.phoneSuccess) {
+            snackbarHostState.showSnackbar("Telefone atualizado!")
+            viewModel.clearPhoneState(); showPhoneDialog = false
         }
+    }
+    LaunchedEffect(uiState.cpfSuccess) {
+        if (uiState.cpfSuccess) {
+            snackbarHostState.showSnackbar("CPF atualizado!")
+            viewModel.clearCpfState(); showCpfDialog = false
+        }
+    }
+    LaunchedEffect(uiState.companyRequestSuccess) {
+        if (uiState.companyRequestSuccess) {
+            snackbarHostState.showSnackbar("Solicitação enviada! Aguarde aprovação do operador.")
+            viewModel.clearCompanyRequestState(); showCompanyRequestDialog = false
+        }
+    }
+    LaunchedEffect(uiState.avatarError) {
+        uiState.avatarError?.let { snackbarHostState.showSnackbar(it); viewModel.clearAvatarError() }
     }
 
     val currentGroup    = uiState.groups.firstOrNull { it.id == uiState.client?.groupId }
     val currentDivision = uiState.divisions.firstOrNull { it.id == currentGroup?.divisionId }
+
+    // ── Valores formatados para exibição ──────────────────────────────────────
+    val phoneDisplay = uiState.client?.phone
+        ?.filter { it.isDigit() }
+        ?.let { if (it.isNotBlank()) applyPhoneMask(it) else null }
+        ?.takeIf { it.isNotBlank() } ?: "Não informado"
+
+    val cpfDisplay = uiState.client?.cpf
+        ?.filter { it.isDigit() }
+        ?.let { if (it.isNotBlank()) applyCpfMask(it) else null }
+        ?.takeIf { it.isNotBlank() } ?: "Não informado"
 
     Scaffold(
         snackbarHost   = { SnackbarHost(snackbarHostState) },
@@ -103,9 +132,8 @@ fun ProfileScreen(
         when {
             uiState.isLoading && uiState.client == null -> Box(
                 Modifier.fillMaxSize().padding(innerPadding), Alignment.Center
-            ) {
-                CircularProgressIndicator(color = WtcBlue)
-            }
+            ) { CircularProgressIndicator(color = WtcBlue) }
+
             else -> Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -119,20 +147,10 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .offset(x = 190.dp, y = (-40).dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.04f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .offset(x = 250.dp, y = 70.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.06f))
-                    )
+                    Box(modifier = Modifier.size(200.dp).offset(x = 190.dp, y = (-40).dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
+                    Box(modifier = Modifier.size(120.dp).offset(x = 250.dp, y = 70.dp)
+                        .clip(CircleShape).background(Color.White.copy(alpha = 0.06f)))
 
                     Column(
                         modifier = Modifier
@@ -140,7 +158,6 @@ fun ProfileScreen(
                             .padding(horizontal = 24.dp)
                             .padding(top = 16.dp, bottom = 32.dp)
                     ) {
-                        // Navegação + ações
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -148,22 +165,17 @@ fun ProfileScreen(
                         ) {
                             IconButton(
                                 onClick  = onNavigateBack,
-                                modifier = Modifier
-                                    .size(36.dp)
+                                modifier = Modifier.size(36.dp)
                                     .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Voltar",
-                                    tint     = Color.White,
-                                    modifier = Modifier.size(18.dp))
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
+                                    tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 if (isEditing) {
                                     IconButton(
                                         onClick  = { isEditing = false; editedName = uiState.client?.name ?: "" },
-                                        modifier = Modifier
-                                            .size(36.dp)
+                                        modifier = Modifier.size(36.dp)
                                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Cancelar",
@@ -171,8 +183,7 @@ fun ProfileScreen(
                                     }
                                     IconButton(
                                         onClick  = { showSaveDialog = true },
-                                        modifier = Modifier
-                                            .size(36.dp)
+                                        modifier = Modifier.size(36.dp)
                                             .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
                                     ) {
                                         Icon(Icons.Default.Check, contentDescription = "Salvar",
@@ -181,11 +192,10 @@ fun ProfileScreen(
                                 } else {
                                     IconButton(
                                         onClick  = { isEditing = true },
-                                        modifier = Modifier
-                                            .size(36.dp)
+                                        modifier = Modifier.size(36.dp)
                                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                                     ) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Editar",
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar nome",
                                             tint = Color.White, modifier = Modifier.size(18.dp))
                                     }
                                 }
@@ -194,7 +204,6 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Avatar + nome + email
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -213,9 +222,7 @@ fun ProfileScreen(
                                     onDeleteAvatar = { viewModel.deleteAvatar() }
                                 )
                             }
-
                             Spacer(modifier = Modifier.width(16.dp))
-
                             Column {
                                 if (isEditing) {
                                     OutlinedTextField(
@@ -238,19 +245,15 @@ fun ProfileScreen(
                                     val nameParts = (uiState.client?.name ?: "").trim().split(" ")
                                     val firstName  = nameParts.firstOrNull() ?: ""
                                     val lastName   = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
-
                                     Text(firstName, fontSize = 22.sp,
-                                        fontWeight = FontWeight.Bold, color = Color.White,
-                                        lineHeight = 26.sp)
+                                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 26.sp)
                                     if (lastName.isNotBlank()) {
-                                        Text(lastName, fontSize = 14.sp,
-                                            color = Color.White.copy(alpha = 0.75f))
+                                        Text(lastName, fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(uiState.client?.email ?: "—",
-                                    fontSize = 12.sp,
-                                    color    = Color.White.copy(alpha = 0.60f))
+                                    fontSize = 12.sp, color = Color.White.copy(alpha = 0.60f))
                             }
                         }
                     }
@@ -266,9 +269,8 @@ fun ProfileScreen(
                 ) {
 
                     // ── Informações da conta ──────────────────────────────────
-                    Text("INFORMAÇÕES DA CONTA",
-                        fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = TextMuted, letterSpacing = 1.2.sp)
+                    Text("INFORMAÇÕES DA CONTA", fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp)
 
                     Card(
                         modifier  = Modifier.fillMaxWidth(),
@@ -286,9 +288,8 @@ fun ProfileScreen(
                                 actionText = "Alterar",
                                 onAction   = { showEmailDialog = true }
                             )
-                            HorizontalDivider(
-                                modifier  = Modifier.padding(horizontal = 16.dp),
-                                color     = Color(0xFFF0F6FA), thickness = 1.dp)
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFFF0F6FA), thickness = 1.dp)
                             ProfileInfoItem(
                                 icon     = Icons.Default.Business,
                                 iconBg   = Color(0xFFEDF7F2),
@@ -297,9 +298,8 @@ fun ProfileScreen(
                                 value    = currentDivision?.name ?: "Não vinculado",
                                 badge    = "só leitura"
                             )
-                            HorizontalDivider(
-                                modifier  = Modifier.padding(horizontal = 16.dp),
-                                color     = Color(0xFFF0F6FA), thickness = 1.dp)
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFFF0F6FA), thickness = 1.dp)
                             ProfileInfoItem(
                                 icon       = Icons.Default.Group,
                                 iconBg     = WtcBlueHint,
@@ -312,10 +312,54 @@ fun ProfileScreen(
                         }
                     }
 
+                    // ── Dados pessoais ────────────────────────────────────────
+                    Text("DADOS PESSOAIS", fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp)
+
+                    Card(
+                        modifier  = Modifier.fillMaxWidth(),
+                        shape     = RoundedCornerShape(20.dp),
+                        colors    = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column {
+                            ProfileInfoItem(
+                                icon       = Icons.Default.Phone,
+                                iconBg     = Color(0xFFE8F4FD),
+                                iconTint   = WtcBlue,
+                                label      = "Telefone",
+                                value      = phoneDisplay,   // ← formatado
+                                actionText = "Alterar",
+                                onAction   = { showPhoneDialog = true }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFFF0F6FA), thickness = 1.dp)
+                            ProfileInfoItem(
+                                icon       = Icons.Default.Badge,
+                                iconBg     = Color(0xFFF3EEF8),
+                                iconTint   = Color(0xFF6B3FA0),
+                                label      = "CPF",
+                                value      = cpfDisplay,     // ← formatado
+                                actionText = "Alterar",
+                                onAction   = { showCpfDialog = true }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFFF0F6FA), thickness = 1.dp)
+                            ProfileInfoItem(
+                                icon       = Icons.Default.CorporateFare,
+                                iconBg     = Color(0xFFEDF7F2),
+                                iconTint   = Color(0xFF1A7A5E),
+                                label      = "Empresa",
+                                value      = uiState.client?.company?.takeIf { it.isNotBlank() } ?: "Não informado",
+                                actionText = "Alterar",
+                                onAction   = { showCompanyRequestDialog = true }
+                            )
+                        }
+                    }
+
                     // ── Segurança ─────────────────────────────────────────────
-                    Text("SEGURANÇA",
-                        fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = TextMuted, letterSpacing = 1.2.sp)
+                    Text("SEGURANÇA", fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp)
 
                     Card(
                         modifier  = Modifier.fillMaxWidth(),
@@ -338,7 +382,8 @@ fun ProfileScreen(
         }
     }
 
-    // ── Dialog confirmar salvamento ───────────────────────────────────────────
+    // ── Dialogs ───────────────────────────────────────────────────────────────
+
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
@@ -358,9 +403,7 @@ fun ProfileScreen(
                 ) { Text("Salvar", fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) {
-                    Text("Cancelar", color = TextMuted)
-                }
+                TextButton(onClick = { showSaveDialog = false }) { Text("Cancelar", color = TextMuted) }
             }
         )
     }
@@ -384,6 +427,56 @@ fun ProfileScreen(
         )
     }
 
+    if (showPhoneDialog) {
+        ChangeSimpleFieldDialog(
+            title        = "Alterar Telefone",
+            fieldLabel   = "Novo telefone",
+            placeholder  = "(11) 99999-9999",
+            currentValue = phoneDisplay,
+            keyboardType = KeyboardType.Phone,
+            isLoading    = uiState.isLoading,
+            error        = uiState.phoneError,
+            success      = uiState.phoneSuccess,
+            successMsg   = "Telefone atualizado com sucesso!",
+            visualTransformation = PhoneVisualTransformation(),
+            onDismiss    = { showPhoneDialog = false; viewModel.clearPhoneState() },
+            onConfirm    = { value -> viewModel.changePhone(value) }
+        )
+    }
+
+    if (showCpfDialog) {
+        ChangeSimpleFieldDialog(
+            title        = "Alterar CPF",
+            fieldLabel   = "Novo CPF",
+            placeholder  = "000.000.000-00",
+            currentValue = cpfDisplay,
+            keyboardType = KeyboardType.Number,
+            isLoading    = uiState.isLoading,
+            error        = uiState.cpfError,
+            success      = uiState.cpfSuccess,
+            successMsg   = "CPF atualizado com sucesso!",
+            visualTransformation = CpfVisualTransformation(),
+            onDismiss    = { showCpfDialog = false; viewModel.clearCpfState() },
+            onConfirm    = { value -> viewModel.changeCpf(value) }
+        )
+    }
+
+    if (showCompanyRequestDialog) {
+        ChangeSimpleFieldDialog(
+            title        = "Alterar Empresa",
+            fieldLabel   = "Nova empresa",
+            placeholder  = "Nome da empresa",
+            currentValue = uiState.client?.company ?: "",
+            keyboardType = KeyboardType.Text,
+            isLoading    = uiState.isLoading,
+            error        = uiState.companyRequestError,
+            success      = uiState.companyRequestSuccess,
+            successMsg   = "Empresa atualizada com sucesso!",
+            onDismiss    = { showCompanyRequestDialog = false; viewModel.clearCompanyRequestState() },
+            onConfirm    = { value -> viewModel.changeCompany(value) }
+        )
+    }
+
     if (showGroupRequestDialog) {
         GroupChangeRequestDialog(
             groups         = uiState.groups,
@@ -398,7 +491,7 @@ fun ProfileScreen(
     }
 }
 
-// ── ProfileInfoItem — linha de informação rica ────────────────────────────────
+// ── ProfileInfoItem ───────────────────────────────────────────────────────────
 
 @Composable
 private fun ProfileInfoItem(
@@ -425,47 +518,109 @@ private fun ProfileInfoItem(
                 .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null,
-                tint = iconTint, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
         }
-
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(label, fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Medium)
             Text(value, fontSize = 14.sp, color = TextPrimary,
                 fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
         }
-
         when {
-            badge != null -> Surface(
-                color = WtcBluePale,
-                shape = RoundedCornerShape(6.dp)
-            ) {
+            badge != null -> Surface(color = WtcBluePale, shape = RoundedCornerShape(6.dp)) {
                 Text(badge, fontSize = 10.sp, color = TextMuted,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
             }
             actionText != null -> TextButton(onClick = { onAction?.invoke() }) {
-                Text(actionText, fontSize = 13.sp,
-                    color = WtcBlue, fontWeight = FontWeight.SemiBold)
+                Text(actionText, fontSize = 13.sp, color = WtcBlue, fontWeight = FontWeight.SemiBold)
             }
-            actionIcon != null -> IconButton(
-                onClick  = { onAction?.invoke() },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(actionIcon, contentDescription = null,
-                    tint = TextMuted, modifier = Modifier.size(20.dp))
+            actionIcon != null -> IconButton(onClick = { onAction?.invoke() }, modifier = Modifier.size(32.dp)) {
+                Icon(actionIcon, contentDescription = null, tint = TextMuted, modifier = Modifier.size(20.dp))
             }
         }
     }
+}
+
+// ── Dialog genérico para alterar campo simples ────────────────────────────────
+
+@Composable
+fun ChangeSimpleFieldDialog(
+    title: String,
+    fieldLabel: String,
+    placeholder: String,
+    currentValue: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    isLoading: Boolean,
+    error: String?,
+    success: Boolean,
+    successMsg: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var newValue by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold, color = TextPrimary) },
+        text = {
+            if (success) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null,
+                        tint = WtcBlue, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(successMsg, fontSize = 14.sp, color = WtcBlue, fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (currentValue.isNotBlank()) {
+                        Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text("Atual: $currentValue", fontSize = 12.sp, color = TextMuted,
+                                modifier = Modifier.padding(10.dp))
+                        }
+                    }
+                    OutlinedTextField(
+                        value         = newValue,
+                        onValueChange = { newValue = it },
+                        label         = { Text(fieldLabel) },
+                        placeholder   = { Text(placeholder, color = TextMuted.copy(alpha = 0.5f)) },
+                        singleLine    = true,
+                        modifier      = Modifier.fillMaxWidth(),
+                        shape         = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                        visualTransformation = visualTransformation
+                    )
+                    error?.let {
+                        Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (success) {
+                TextButton(onClick = onDismiss) { Text("Fechar") }
+            } else {
+                Button(
+                    onClick  = { onConfirm(newValue) },
+                    enabled  = !isLoading && newValue.isNotBlank(),
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                ) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Text("Salvar", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        },
+        dismissButton = { if (!success) TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
+    )
 }
 
 // ── Componentes auxiliares ────────────────────────────────────────────────────
 
 @Composable
 fun ProfileInfoRow(
-    icon: ImageVector,
-    label: String, value: String, isReadOnly: Boolean = false
+    icon: ImageVector, label: String, value: String, isReadOnly: Boolean = false
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = WtcBlue, modifier = Modifier.size(22.dp))
@@ -499,15 +654,15 @@ fun ChangePasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Alterar Senha", fontWeight = FontWeight.Bold) },
+        title = { Text("Alterar Senha", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
             if (success) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                        tint = WtcBlue, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Senha alterada com sucesso!", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                    Text("Senha alterada com sucesso!", fontSize = 14.sp,
+                        color = WtcBlue, fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -518,11 +673,9 @@ fun ChangePasswordDialog(
                     ClientPasswordField(value = confirmPassword, onValueChange = { confirmPassword = it },
                         label = "Confirmar nova senha", visible = showConfirm,
                         onToggleVisibility = { showConfirm = !showConfirm }, isError = passwordMismatch)
-                    if (passwordMismatch)
-                        Text("As senhas não coincidem.", style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error)
-                    error?.let { Text(it, style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error) }
+                    if (passwordMismatch) Text("As senhas não coincidem.", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error)
+                    error?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error) }
                 }
             }
         },
@@ -531,8 +684,7 @@ fun ChangePasswordDialog(
                 TextButton(onClick = onDismiss) { Text("Fechar") }
             } else {
                 Button(onClick = { onConfirm(currentPassword, newPassword) },
-                    enabled = !isLoading && currentPassword.isNotBlank() &&
-                            newPassword.isNotBlank() && !passwordMismatch,
+                    enabled = !isLoading && currentPassword.isNotBlank() && newPassword.isNotBlank() && !passwordMismatch,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
                     if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -568,22 +720,21 @@ fun ClientChangeEmailDialog(
     currentEmail: String, isLoading: Boolean, error: String?,
     onDismiss: () -> Unit, onConfirm: (newEmail: String, password: String) -> Unit
 ) {
-    var newEmail      by remember { mutableStateOf("") }
-    var confirmEmail  by remember { mutableStateOf("") }
-    var password      by remember { mutableStateOf("") }
-    var showPassword  by remember { mutableStateOf(false) }
+    var newEmail     by remember { mutableStateOf("") }
+    var confirmEmail by remember { mutableStateOf("") }
+    var password     by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
     val emailMismatch  = newEmail.isNotBlank() && confirmEmail.isNotBlank() && newEmail != confirmEmail
     val emailUnchanged = newEmail.isNotBlank() && newEmail == currentEmail
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Alterar E-mail", fontWeight = FontWeight.Bold) },
+        title = { Text("Alterar E-mail", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Text("E-mail atual: $currentEmail", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(10.dp))
+                Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text("E-mail atual: $currentEmail", fontSize = 12.sp, color = TextMuted,
+                        modifier = Modifier.padding(10.dp))
                 }
                 OutlinedTextField(value = newEmail, onValueChange = { newEmail = it },
                     label = { Text("Novo e-mail") }, singleLine = true,
@@ -592,15 +743,14 @@ fun ClientChangeEmailDialog(
                 OutlinedTextField(value = confirmEmail, onValueChange = { confirmEmail = it },
                     label = { Text("Confirmar novo e-mail") }, singleLine = true,
                     isError = emailMismatch, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-                if (emailMismatch) Text("Os e-mails não coincidem.",
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-                if (emailUnchanged) Text("O novo e-mail é igual ao atual.",
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                if (emailMismatch) Text("Os e-mails não coincidem.", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error)
+                if (emailUnchanged) Text("O novo e-mail é igual ao atual.", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error)
                 ClientPasswordField(value = password, onValueChange = { password = it },
                     label = "Confirme sua senha", visible = showPassword,
                     onToggleVisibility = { showPassword = !showPassword })
-                error?.let { Text(it, style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error) }
+                error?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error) }
                 Surface(color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
@@ -608,22 +758,21 @@ fun ClientChangeEmailDialog(
                             modifier = Modifier.size(16.dp).padding(top = 2.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Você será desconectado e precisará fazer login com o novo e-mail.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer)
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
             }
         },
         confirmButton = {
             Button(onClick = { onConfirm(newEmail, password) },
-                enabled = !isLoading && newEmail.isNotBlank() && !emailMismatch &&
-                        !emailUnchanged && password.isNotBlank(),
-                shape = RoundedCornerShape(12.dp)) {
+                enabled = !isLoading && newEmail.isNotBlank() && !emailMismatch && !emailUnchanged && password.isNotBlank(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 else Text("Alterar E-mail")
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
     )
 }
 
@@ -643,11 +792,11 @@ fun GroupChangeRequestDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Solicitar Troca de Grupo", fontWeight = FontWeight.Bold) },
+        title = { Text("Solicitar Troca de Grupo", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Escolha o grupo desejado. Um operador avaliará sua solicitação.",
-                    style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    fontSize = 13.sp, color = TextMuted)
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = selectedGroup?.name ?: "Selecione o novo grupo...",
@@ -659,8 +808,7 @@ fun GroupChangeRequestDialog(
                         divisions.forEach { division ->
                             val divGroups = groupsByDivision[division.id] ?: emptyList()
                             if (divGroups.isNotEmpty()) {
-                                DropdownMenuItem(text = { Text(division.name,
-                                    style = MaterialTheme.typography.labelSmall,
+                                DropdownMenuItem(text = { Text(division.name, fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold, color = WtcBlue) },
                                     onClick = {}, enabled = false)
                                 divGroups.filter { it.id != currentGroupId }.forEach { group ->
@@ -672,8 +820,7 @@ fun GroupChangeRequestDialog(
                     }
                 }
                 if (selectedGroup?.id == currentGroupId)
-                    Text("Este já é seu grupo atual.", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error)
+                    Text("Este já é seu grupo atual.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 OutlinedTextField(value = reason, onValueChange = { reason = it },
                     label = { Text("Motivo (opcional)") }, modifier = Modifier.fillMaxWidth(),
                     maxLines = 3, shape = RoundedCornerShape(12.dp))
@@ -682,8 +829,11 @@ fun GroupChangeRequestDialog(
         confirmButton = {
             Button(onClick = { onConfirm(selectedGroup!!.id, reason) },
                 enabled = selectedGroup != null && selectedGroup?.id != currentGroupId,
-                shape = RoundedCornerShape(12.dp)) { Text("Enviar Solicitação") }
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
+                Text("Enviar Solicitação", fontWeight = FontWeight.SemiBold)
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
     )
 }
