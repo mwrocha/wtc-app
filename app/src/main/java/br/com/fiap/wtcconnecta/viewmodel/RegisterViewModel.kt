@@ -19,17 +19,34 @@ class RegisterViewModel(private val repository: AuthRepository = AuthRepository(
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun register(name: String, email: String, password: String, role: String) {
+    fun register(
+        name: String,
+        email: String,
+        password: String,
+        role: String,
+        cpf: String? = null,
+        phone: String? = null,
+        company: String? = null
+    ) {
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
-            _uiState.update { it.copy(error = "Todos os campos são obrigatórios.") }
+            _uiState.update { it.copy(error = "Todos os campos obrigatórios devem ser preenchidos.") }
             return
+        }
+
+        if (role == "CLIENT") {
+            if (cpf.isNullOrBlank()) {
+                _uiState.update { it.copy(error = "CPF é obrigatório para clientes.") }
+                return
+            }
+            if (phone.isNullOrBlank()) {
+                _uiState.update { it.copy(error = "Telefone é obrigatório para clientes.") }
+                return
+            }
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
-            // O repository decide se cria User ou Client com base no role
-            repository.register(name, email, password, role)
+            repository.register(name, email, password, role, cpf, phone, company)
                 .onSuccess {
                     _uiState.update { it.copy(isLoading = false, registerSuccess = true) }
                 }
@@ -44,11 +61,7 @@ class RegisterViewModel(private val repository: AuthRepository = AuthRepository(
         }
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
-    }
+    fun clearError() { _uiState.update { it.copy(error = null) } }
 
-    fun onRegisterHandled() {
-        _uiState.update { it.copy(registerSuccess = false, error = null) }
-    }
+    fun onRegisterHandled() { _uiState.update { it.copy(registerSuccess = false, error = null) } }
 }
