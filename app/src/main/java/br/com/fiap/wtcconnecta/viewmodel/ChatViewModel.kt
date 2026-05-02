@@ -135,7 +135,7 @@ class ChatViewModel(
 
             // Marca conversa como lida ao carregar
             val convId = currentChatId.ifBlank { chatId }
-            if (convId.isNotBlank() && chatType != "group") {
+            if (convId.isNotBlank()) {
                 markConversationAsRead(convId)
             }
 
