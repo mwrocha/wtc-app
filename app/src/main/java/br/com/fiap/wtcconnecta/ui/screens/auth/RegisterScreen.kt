@@ -1,5 +1,8 @@
 package br.com.fiap.wtcconnecta.ui.screens.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,14 +20,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.viewmodel.RegisterViewModel
+import br.com.fiap.wtcconnecta.ui.components.CpfVisualTransformation
+import br.com.fiap.wtcconnecta.ui.components.PhoneVisualTransformation
+import br.com.fiap.wtcconnecta.ui.components.applyCpfMask
+import br.com.fiap.wtcconnecta.ui.components.applyPhoneMask
 
 private val WtcBlue     = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
@@ -33,6 +43,7 @@ private val WtcBlueHint = Color(0xFFD0E8F2)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val TextPrimary = Color(0xFF0D2B3E)
 private val TextMuted   = Color(0xFF6E90A0)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +57,17 @@ fun RegisterScreen(
     var password        by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var selectedRole    by remember { mutableStateOf("CLIENT") }
+    var cpf             by remember { mutableStateOf("") }
+    var phone           by remember { mutableStateOf("") }
+    var company         by remember { mutableStateOf("") }
     val uiState         by registerViewModel.uiState.collectAsState()
+
+    val isClient = selectedRole == "CLIENT"
+    val cpfDigits = cpf.filter { it.isDigit() }
+    val phoneDigits = phone.filter { it.isDigit() }
+
+    val isFormValid = name.isNotBlank() && email.isNotBlank() && password.isNotBlank() &&
+            (!isClient || (cpfDigits.length == 11 && phoneDigits.length == 11))
 
     LaunchedEffect(uiState.registerSuccess) {
         if (uiState.registerSuccess) {
@@ -60,7 +81,6 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
     ) {
-        // Detalhes geométricos decorativos
         Box(modifier = Modifier.size(220.dp).offset(x = 180.dp, y = (-50).dp)
             .clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
         Box(modifier = Modifier.size(140.dp).offset(x = (-50).dp, y = 80.dp)
@@ -95,7 +115,7 @@ fun RegisterScreen(
                     modifier = Modifier.padding(top = 4.dp))
             }
 
-            // Card do formulário (ocupa o resto da tela)
+            // Card do formulário
             Card(
                 modifier  = Modifier.fillMaxSize(),
                 shape     = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
@@ -210,6 +230,115 @@ fun RegisterScreen(
                         }
                     }
 
+                    // ── Campos exclusivos para CLIENT ─────────────────────────
+                    AnimatedVisibility(
+                        visible = isClient,
+                        enter   = expandVertically(),
+                        exit    = shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+                            // Divisor visual
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                HorizontalDivider(modifier = Modifier.weight(1f), color = WtcBlueHint)
+                                Text("Dados do cliente", fontSize = 11.sp,
+                                    color = TextMuted, fontWeight = FontWeight.SemiBold)
+                                HorizontalDivider(modifier = Modifier.weight(1f), color = WtcBlueHint)
+                            }
+
+                            // CPF
+                            Column {
+                                Row {
+                                    Text("CPF", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary)
+                                    Text(" *", fontSize = 12.sp, color = Color(0xFFE53935),
+                                        fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value         = cpfDigits,
+                                    onValueChange = { if (it.filter { c -> c.isDigit() }.length <= 11) cpf = it },
+                                    placeholder   = { Text("000.000.000-00", color = TextMuted.copy(alpha = 0.6f)) },
+                                    singleLine    = true,
+                                    modifier      = Modifier.fillMaxWidth(),
+                                    isError       = cpfDigits.isNotEmpty() && cpfDigits.length < 11,
+                                    leadingIcon   = {
+                                        Icon(Icons.Default.Badge, contentDescription = null,
+                                            tint = if (cpfDigits.length == 11) WtcBlue else WtcBlueHint,
+                                            modifier = Modifier.size(18.dp))
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    visualTransformation = CpfVisualTransformation(),
+                                    shape  = RoundedCornerShape(14.dp),
+                                    colors = authFieldColors()
+                                )
+                                if (cpfDigits.isNotEmpty() && cpfDigits.length < 11) {
+                                    Text("CPF deve ter 11 dígitos", fontSize = 11.sp,
+                                        color = Color(0xFFE53935),
+                                        modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                                }
+                            }
+
+                            // Telefone
+                            Column {
+                                Row {
+                                    Text("Telefone", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary)
+                                    Text(" *", fontSize = 12.sp, color = Color(0xFFE53935),
+                                        fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value         = phoneDigits,
+                                    onValueChange = { if (it.filter { c -> c.isDigit() }.length <= 11) phone = it },
+                                    placeholder   = { Text("(11) 99999-9999", color = TextMuted.copy(alpha = 0.6f)) },
+                                    singleLine    = true,
+                                    modifier      = Modifier.fillMaxWidth(),
+                                    isError       = phoneDigits.isNotEmpty() && phoneDigits.length < 11,
+                                    leadingIcon   = {
+                                        Icon(Icons.Default.Phone, contentDescription = null,
+                                            tint = if (phoneDigits.length == 11) WtcBlue else WtcBlueHint,
+                                            modifier = Modifier.size(18.dp))
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    visualTransformation = PhoneVisualTransformation(),
+                                    shape  = RoundedCornerShape(14.dp),
+                                    colors = authFieldColors()
+                                )
+                                if (phoneDigits.isNotEmpty() && phoneDigits.length < 11) {
+                                    Text("Digite DDD + 9 números", fontSize = 11.sp,
+                                        color = Color(0xFFE53935),
+                                        modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+                                }
+                            }
+
+                            // Empresa (opcional)
+                            Column {
+                                Text("Empresa", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary, modifier = Modifier.padding(bottom = 6.dp))
+                                OutlinedTextField(
+                                    value         = company,
+                                    onValueChange = { company = it },
+                                    placeholder   = { Text("Nome da empresa (opcional)",
+                                        color = TextMuted.copy(alpha = 0.6f)) },
+                                    singleLine    = true,
+                                    modifier      = Modifier.fillMaxWidth(),
+                                    leadingIcon   = {
+                                        Icon(Icons.Default.Business, contentDescription = null,
+                                            tint = if (company.isNotBlank()) WtcBlue else WtcBlueHint,
+                                            modifier = Modifier.size(18.dp))
+                                    },
+                                    shape  = RoundedCornerShape(14.dp),
+                                    colors = authFieldColors()
+                                )
+                            }
+                        }
+                    }
+
                     uiState.error?.let {
                         Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
@@ -217,8 +346,18 @@ fun RegisterScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Button(
-                        onClick  = { registerViewModel.register(name, email, password, selectedRole) },
-                        enabled  = !uiState.isLoading && name.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
+                        onClick = {
+                            registerViewModel.register(
+                                name    = name,
+                                email   = email,
+                                password = password,
+                                role    = selectedRole,
+                                cpf     = if (isClient) applyCpfMask(cpfDigits) else null,
+                                phone   = if (isClient) applyPhoneMask(phoneDigits) else null,
+                                company = if (isClient && company.isNotBlank()) company else null
+                            )
+                        },
+                        enabled  = !uiState.isLoading && isFormValid,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(14.dp),
                         colors   = ButtonDefaults.buttonColors(
