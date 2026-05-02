@@ -63,6 +63,7 @@ fun OperatorDashboardScreen(
     onNavigateToAudit: () -> Unit = {},
     onNavigateToGroupRequests: () -> Unit = {},
     onNavigateToAttendanceQueue: () -> Unit = {},
+    onNavigateToGroupChat: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: HomeOperatorViewModel = viewModel()
 ) {
@@ -407,7 +408,7 @@ fun OperatorDashboardScreen(
                                     fontSize   = 15.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color      = TextPrimary)
-                                Text("Baseado em $ratingTotal avaliação(ões)",
+                                Text("Baseado em $ratingTotal avaliações",
                                     fontSize = 12.sp,
                                     color    = TextMuted,
                                     modifier = Modifier.padding(top = 2.dp))
@@ -440,8 +441,8 @@ fun OperatorDashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GridDashboardCard(modifier = Modifier.weight(1f), title = "Clientes",
                         icon = Icons.Default.People, onClick = onViewClients)
-                    GridDashboardCard(modifier = Modifier.weight(1f), title = "Msg Grupo",
-                        icon = Icons.Default.Groups, onClick = { showGroupMessageDialog = true })
+                    GridDashboardCard(modifier = Modifier.weight(1f), title = "Mensagens",
+                        icon = Icons.Default.Forum, onClick = onNavigateToGroupChat)
                     GridDashboardCard(modifier = Modifier.weight(1f), title = "Campanhas",
                         icon = Icons.Default.Campaign, onClick = onNavigateToCampaigns)
                 }
