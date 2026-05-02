@@ -17,7 +17,15 @@ import retrofit2.http.*
 
 data class LoginRequest(val email: String, val password: String)
 data class LoginResponse(val token: String, val id: String, val role: String, val email: String, val name: String)
-data class RegisterRequest(val name: String, val email: String, val password: String, val role: String)
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val role: String,
+    val cpf: String? = null,
+    val phone: String? = null,
+    val company: String? = null
+)
 data class RegisterResponse(val token: String, val userId: String)
 data class NoteRequest(val text: String, val clientId: String)
 data class MessageRequest(val recipientId: String, val title: String? = null, val body: String, val groupId: String? = null)
@@ -132,6 +140,9 @@ interface ApiService {
     @GET("api/campaigns-received")
     suspend fun getMyCampaigns(): List<Message>
 
+    @GET("api/campaigns-received/unread/count")
+    suspend fun getUnreadCampaignCount(): UnreadCountResponse
+
     @GET("api/campaigns-received/{clientId}")
     suspend fun getCampaignsForClient(@Path("clientId") clientId: String): List<Message>
 
@@ -186,6 +197,9 @@ interface ApiService {
 
     @PATCH("api/users/me/name")
     suspend fun updateMyName(@Body body: Map<String, String>): retrofit2.Response<Void>
+
+    @PATCH("api/users/me/profile")
+    suspend fun updateMyProfile(@Body body: Map<String, String>): Response<Map<String, String>>
 
     // ── Divisions & Groups ────────────────────────────────────────────────────
     @GET("api/divisions")
@@ -244,6 +258,12 @@ interface ApiService {
     // ── Solicitação de troca de grupo ─────────────────────────────────────────
     @POST("api/group-change-requests")
     suspend fun requestGroupChange(@Body body: Map<String, String>): Response<Unit>
+
+    // ── Solicitação de troca de empresa ───────────────────────────────────────
+    @POST("api/company-change-requests")
+    suspend fun requestCompanyChange(
+        @Body body: Map<String, String>
+    ): Response<Unit>
 
     // ── Solicitações de troca de grupo (operador) ─────────────────────────────
     @GET("api/group-change-requests")
