@@ -31,7 +31,16 @@ data class ProfileUiState(
     val emailError: String? = null,
     val avatarUrl: String? = null,
     val isUploadingAvatar: Boolean = false,
-    val avatarError: String? = null
+    val avatarError: String? = null,
+    // Telefone
+    val phoneSuccess: Boolean = false,
+    val phoneError: String? = null,
+    // CPF
+    val cpfSuccess: Boolean = false,
+    val cpfError: String? = null,
+    // Empresa (solicitação)
+    val companyRequestSuccess: Boolean = false,
+    val companyRequestError: String? = null
 )
 
 class ProfileViewModel(
@@ -112,35 +121,67 @@ class ProfileViewModel(
         }
     }
 
-    fun updateClientProfile(name: String, selectedGroupId: String) {
+    fun updateClientProfile(
+        name: String,
+        selectedGroupId: String,
+        phone: String? = null,
+        cpf: String? = null,
+        company: String? = null
+    ) {
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, success = false) }
             try {
-                // Chama o endpoint seguro PATCH /api/users/me/name
-                val response = RetrofitClient.instance.updateMyName(mapOf("name" to name))
-                // Considera sucesso se 200-299, ignora exceção de parse do body
-                val succeeded = response.isSuccessful
-                if (succeeded) {
+                // Atualiza nome via endpoint dedicado
+                val nameResponse = RetrofitClient.instance.updateMyName(mapOf("name" to name))
+                val nameOk = nameResponse.isSuccessful
+
+                // Atualiza demais campos via PUT /api/clients/{id}
+                val fieldsOk = try {
+                    repository.updateClientProfile(
+                        clientId  = client.id,
+                        name      = name,
+                        groupId   = selectedGroupId,
+                        phone     = phone,
+                        cpf       = cpf,
+                        company   = company
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("ProfileViewModel", "updateClientProfile fields: ${e.message}")
+                    true // ignora erro de parse do body
+                }
+
+                if (nameOk || fieldsOk) {
                     _uiState.update {
                         it.copy(
-                            client    = client.copy(name = name, groupId = selectedGroupId),
+                            client    = client.copy(
+                                name    = name,
+                                groupId = selectedGroupId,
+                                phone   = phone ?: client.phone,
+                                tags  = client.tags ?: emptyList(),
+                                cpf     = cpf ?: client.cpf,
+                                company = company ?: client.company
+                            ),
                             isLoading = false,
                             success   = true
                         )
                     }
                     _navigateBack.tryEmit(Unit)
                 } else {
-                    _uiState.update {
-                        it.copy(isLoading = false, error = "Falha ao atualizar perfil (${response.code()}).")
-                    }
+                    _uiState.update { it.copy(isLoading = false, error = "Falha ao atualizar perfil.") }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("ProfileViewModel", "updateClientProfile exception: ${e.message}")
-                // Se lançou exceção mas pode ter sido só parse do body — trata como sucesso
                 _uiState.update {
                     it.copy(
-                        client    = client.copy(name = name, groupId = selectedGroupId),
+                        client    = client.copy(
+                            name    = name,
+                            groupId = selectedGroupId,
+                            phone   = phone ?: client.phone,
+                            tags  = client.tags ?: emptyList(),
+                            cpf     = cpf ?: client.cpf,
+                            company = company ?: client.company
+                        ),
                         isLoading = false,
                         success   = true
                     )
@@ -215,6 +256,80 @@ class ProfileViewModel(
             }
         }
     }
+
+    fun changePhone(newPhone: String) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, phoneError = null, phoneSuccess = false) }
+            repository.changePhone(client.id, newPhone)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isLoading    = false,
+                            phoneSuccess = true,
+                            client       = it.client?.copy(
+                                phone = newPhone,
+                                tags  = it.client.tags ?: emptyList()  // ← fix
+                            )
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false, phoneError = e.message ?: "Erro ao alterar telefone.") }
+                }
+        }
+    }
+
+    fun changeCpf(newCpf: String) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, cpfError = null, cpfSuccess = false) }
+            repository.changeCpf(client.id, newCpf)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isLoading  = false,
+                            cpfSuccess = true,
+                            client     = it.client?.copy(
+                                cpf  = newCpf,
+                                tags = it.client.tags ?: emptyList()  // ← fix
+                            )
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false, cpfError = e.message ?: "Erro ao alterar CPF.") }
+                }
+        }
+    }
+
+    fun changeCompany(newCompany: String) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, companyRequestError = null, companyRequestSuccess = false) }
+            repository.changeCompany(client.id, newCompany)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isLoading             = false,
+                            companyRequestSuccess = true,
+                            client                = it.client?.copy(
+                                company = newCompany,
+                                tags    = it.client.tags ?: emptyList()  // ← fix
+                            )
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isLoading = false, companyRequestError = e.message ?: "Erro ao alterar empresa.") }
+                }
+        }
+    }
+
+
+    fun clearPhoneState()          { _uiState.update { it.copy(phoneSuccess = false, phoneError = null) } }
+    fun clearCpfState()            { _uiState.update { it.copy(cpfSuccess = false, cpfError = null) } }
+    fun clearCompanyRequestState() { _uiState.update { it.copy(companyRequestSuccess = false, companyRequestError = null) } }
 
     fun clearAvatarError()   { _uiState.update { it.copy(avatarError = null) } }
     fun clearEmailState()    { _uiState.update { it.copy(emailSuccess = false, emailError = null) } }
