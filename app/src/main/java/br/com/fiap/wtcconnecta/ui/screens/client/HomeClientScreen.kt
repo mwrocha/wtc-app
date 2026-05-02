@@ -57,14 +57,21 @@ fun HomeClientScreen(
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var unreadCount      by remember { mutableIntStateOf(0) }
+    var unreadCount         by remember { mutableIntStateOf(0) }
+    var unreadCampaignCount by remember { mutableIntStateOf(0) }
     val profileUiState   by profileViewModel.uiState.collectAsState()
     val avatarUrl        = profileUiState.avatarUrl
 
-    val displayName  = profileUiState.client?.name?.takeIf { it.isNotBlank() } ?: clientName
-    val nameParts    = displayName.trim().split(" ")
-    val firstName    = nameParts.firstOrNull() ?: ""
-    val lastName     = if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
+    val displayName = remember(profileUiState.client, clientName) {
+        profileUiState.client?.name?.takeIf { it.isNotBlank() } ?: clientName
+    }
+
+    val nameParts = remember(displayName) { displayName.trim().split(" ") }
+    val firstName = remember(nameParts) { nameParts.firstOrNull() ?: "" }
+    val lastName  = remember(nameParts) {
+        if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
+    }
+
 
     LaunchedEffect(clientId) {
         profileViewModel.loadProfile(clientId)
@@ -73,6 +80,10 @@ fun HomeClientScreen(
             try {
                 val resp = RetrofitClient.instance.getUnreadCount()
                 unreadCount = resp.count
+            } catch (_: Exception) {}
+            try {
+                val resp = RetrofitClient.instance.getUnreadCampaignCount()
+                unreadCampaignCount = resp.count
             } catch (_: Exception) {}
             kotlinx.coroutines.delay(30_000)
         }
@@ -149,35 +160,26 @@ fun HomeClientScreen(
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
-                                .background(Color.White.copy(alpha = 0.20f), CircleShape)
-                                .padding(3.dp)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.20f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (!avatarUrl.isNullOrBlank()) {
+                            if (!avatarUrl.isNullOrBlank() && avatarUrl.startsWith("http")) {
                                 AsyncImage(
                                     model              = avatarUrl,
                                     contentDescription = "Foto de perfil",
                                     contentScale       = ContentScale.Crop,
                                     modifier           = Modifier
-                                        .size(66.dp)
+                                        .size(72.dp)
                                         .clip(CircleShape)
                                 )
                             } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(66.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        firstName.firstOrNull()?.uppercase() ?: "C",
-                                        fontSize   = 26.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color      = Color.White
-                                    )
-                                }
+                                Text(
+                                    text = displayName.firstOrNull()?.uppercase() ?: firstName.firstOrNull()?.uppercase() ?: "?",
+                                    fontSize   = 26.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color      = Color.White
+                                )
                             }
                         }
 
@@ -254,13 +256,14 @@ fun HomeClientScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     SecondaryNavCard(
-                        title    = "Campanhas",
-                        subtitle = "Ofertas\nexclusivas",
-                        icon     = Icons.Default.Campaign,
-                        accent   = WtcBlueSoft,
-                        bgAccent = Color(0xFFDEEFF7),
-                        onClick  = onNavigateToCampaigns,
-                        modifier = Modifier.weight(1f)
+                        title      = "Campanhas",
+                        subtitle   = "Ofertas\nexclusivas",
+                        icon       = Icons.Default.Campaign,
+                        accent     = WtcBlueSoft,
+                        bgAccent   = Color(0xFFDEEFF7),
+                        onClick    = onNavigateToCampaigns,
+                        modifier   = Modifier.weight(1f),
+                        badgeCount = unreadCampaignCount
                     )
                     SecondaryNavCard(
                         title    = "Meu Perfil",
@@ -405,7 +408,8 @@ fun PrimaryNavCard(
 fun SecondaryNavCard(
     title: String, subtitle: String, icon: ImageVector,
     accent: Color, bgAccent: Color, onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    badgeCount: Int = 0
 ) {
     Card(
         onClick   = onClick,
@@ -420,14 +424,33 @@ fun SecondaryNavCard(
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(bgAccent),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(bgAccent),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+                }
+                if (badgeCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE53935))
+                            .align(Alignment.TopEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (badgeCount > 99) "99+" else badgeCount.toString(),
+                            fontSize   = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.White
+                        )
+                    }
+                }
             }
             Column {
                 Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
