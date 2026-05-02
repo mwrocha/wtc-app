@@ -68,11 +68,22 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
         name: String,
         email: String,
         password: String,
-        role: String
+        role: String,
+        cpf: String? = null,
+        phone: String? = null,
+        company: String? = null
     ): Result<Unit> {
         return try {
             val response = apiService.register(
-                RegisterRequest(name = name, email = email, password = password, role = role)
+                RegisterRequest(
+                    name     = name,
+                    email    = email,
+                    password = password,
+                    role     = role,
+                    cpf      = cpf,
+                    phone    = phone,
+                    company  = company
+                )
             )
             if (response.isSuccessful) {
                 response.body()?.token?.let { RetrofitClient.authToken = it }
@@ -109,17 +120,22 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
         apiService.getClientById(clientId)
 
     suspend fun updateClientProfile(
-        clientId: String, name: String, groupId: String,
-        currentClient: br.com.fiap.wtcconnecta.data.model.Client? = null
+        clientId: String,
+        name: String,
+        groupId: String,
+        phone: String? = null,
+        cpf: String? = null,
+        company: String? = null
     ): Boolean {
-        return try {
-            apiService.updateMyName(mapOf("name" to name)).isSuccessful
-        } catch (e: Exception) {
-            // Se lançou exceção mas o nome foi salvo (pode ser erro de parse do response body)
-            // Considera sucesso para não bloquear o usuário
-            android.util.Log.w("AuthRepository", "updateMyName exception (ignorada): ${e.message}")
-            true
-        }
+        val client  = apiService.getClientById(clientId)
+        val updated = client.copy(
+            name    = name,
+            groupId = groupId,
+            phone   = phone ?: client.phone,
+            cpf     = cpf ?: client.cpf,
+            company = company ?: client.company
+        )
+        return apiService.updateClient(clientId, updated).isSuccessful
     }
 
     // ── Anotações ─────────────────────────────────────────────────────────────
@@ -241,6 +257,36 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
             )
             response.isSuccessful
         } catch (e: Exception) { false }
+    }
+
+    suspend fun changeCompany(clientId: String, newCompany: String): Result<Unit> {
+        return try {
+            val client  = apiService.getClientById(clientId)
+            val updated = client.copy(company = newCompany)
+            val response = apiService.updateClient(clientId, updated)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Erro ao atualizar empresa (${response.code()})"))
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun changePhone(clientId: String, newPhone: String): Result<Unit> {
+        return try {
+            val client  = apiService.getClientById(clientId)
+            val updated = client.copy(phone = newPhone)
+            val response = apiService.updateClient(clientId, updated)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Erro ao atualizar telefone (${response.code()})"))
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun changeCpf(clientId: String, newCpf: String): Result<Unit> {
+        return try {
+            val client  = apiService.getClientById(clientId)
+            val updated = client.copy(cpf = newCpf)
+            val response = apiService.updateClient(clientId, updated)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Erro ao atualizar CPF (${response.code()})"))
+        } catch (e: Exception) { Result.failure(e) }
     }
 
     // ── Senha e Email ─────────────────────────────────────────────────────────
