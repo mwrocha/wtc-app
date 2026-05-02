@@ -9,6 +9,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import androidx.navigation.navOptions
 import br.com.fiap.wtcconnecta.ui.screens.auth.LoginScreen
 import br.com.fiap.wtcconnecta.ui.screens.auth.RegisterScreen
@@ -21,6 +22,8 @@ import br.com.fiap.wtcconnecta.ui.screens.operator.KanbanScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.AuditScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.GroupRequestsScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.GroupManagementScreen
+import br.com.fiap.wtcconnecta.ui.screens.operator.GroupListScreen
+import br.com.fiap.wtcconnecta.ui.screens.operator.GroupChatScreen
 import br.com.fiap.wtcconnecta.ui.screens.profile.OperatorProfileScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.ClientDetailScreen
 import br.com.fiap.wtcconnecta.ui.screens.operator.HomeOperatorScreen
@@ -33,6 +36,7 @@ import br.com.fiap.wtcconnecta.viewmodel.ChatViewModel
 import br.com.fiap.wtcconnecta.viewmodel.LoginResult
 import br.com.fiap.wtcconnecta.viewmodel.MainViewModel
 import br.com.fiap.wtcconnecta.data.repository.AuthRepository
+import br.com.fiap.wtcconnecta.data.remote.RetrofitClient
 
 sealed class Routes(val route: String) {
     object Login : Routes("login")
@@ -46,6 +50,13 @@ sealed class Routes(val route: String) {
     object Audit : Routes("audit")
     object GroupRequests : Routes("group_requests")
     object AttendanceQueue : Routes("attendance_queue")
+    object GroupList : Routes("group_list")
+    object GroupChat : Routes("group_chat/{groupId}/{groupName}") {
+        fun createRoute(groupId: String, groupName: String): String {
+            val safeName = groupName.replace("/", "_")
+            return "group_chat/$groupId/$safeName"
+        }
+    }
     object OperatorProfile : Routes("operator_profile/{operatorId}") {
         fun createRoute(operatorId: String) = "operator_profile/$operatorId"
     }
@@ -75,6 +86,17 @@ fun NavGraph(
     mainViewModel: MainViewModel = viewModel()
 ) {
     val userSession by mainViewModel.userSession.collectAsState()
+
+    // ── Registra callback de sessão expirada (401) ────────────────────────────
+    LaunchedEffect(Unit) {
+        RetrofitClient.onSessionExpired = {
+            mainViewModel.logout()
+            AuthRepository().logout()
+            navController.navigate(Routes.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     NavHost(navController = navController, startDestination = Routes.Login.route) {
 
@@ -116,6 +138,7 @@ fun NavGraph(
                     onNavigateToAudit         = { navController.navigate(Routes.Audit.route) },
                     onNavigateToGroupRequests = { navController.navigate(Routes.GroupRequests.route) },
                     onNavigateToAttendanceQueue = { navController.navigate(Routes.AttendanceQueue.route) },
+                    onNavigateToGroupChat       = { navController.navigate(Routes.GroupList.route) },
                     onLogout = {
                         mainViewModel.logout()
                         AuthRepository().logout()
@@ -193,7 +216,12 @@ fun NavGraph(
             }
         }
 
-        composable(Routes.Chat.route) { backStackEntry ->
+        composable(
+            route = Routes.Chat.route,
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "wtcconnecta://chat/{chatId}/{chatName}/{chatType}" }
+            )
+        ) { backStackEntry ->
             val chatId   = backStackEntry.arguments?.getString("chatId")
             val chatName = backStackEntry.arguments?.getString("chatName")
             val chatType = backStackEntry.arguments?.getString("chatType")
@@ -279,19 +307,39 @@ fun NavGraph(
             AttendanceQueueScreen(
                 onBack = { navController.popBackStack() },
                 onAssumeAndNavigate = { clientId, _ ->
-                    // Após assumir → abre ClientDetailScreen do cliente
                     navController.navigate(Routes.ClientDetail.createRoute(clientId)) {
                         popUpTo(Routes.AttendanceQueue.route) { inclusive = true }
                     }
                 },
-                // Atendimento já ativo → abre ClientDetailScreen (chat completo com abas)
                 onNavigateToActive = { clientId, _ ->
                     navController.navigate(Routes.ClientDetail.createRoute(clientId))
                 },
-                // Sessão encerrada → abre ClientDetailScreen para ver histórico
                 onNavigateToClosed = { clientId ->
                     navController.navigate(Routes.ClientDetail.createRoute(clientId))
                 }
+            )
+        }
+
+        // ── Lista de grupos para chat ─────────────────────────────────────────
+        composable(Routes.GroupList.route) {
+            GroupListScreen(
+                onBack       = { navController.popBackStack() },
+                onGroupClick = { groupId, groupName ->
+                    navController.navigate(Routes.GroupChat.createRoute(groupId, groupName))
+                }
+            )
+        }
+
+        // ── Chat de um grupo específico ───────────────────────────────────────
+        composable(Routes.GroupChat.route) { backStackEntry ->
+            val groupId   = backStackEntry.arguments?.getString("groupId") ?: ""
+            val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
+            val session   = userSession
+            GroupChatScreen(
+                groupId    = groupId,
+                groupName  = groupName,
+                operatorId = session?.email ?: "",
+                onBack     = { navController.popBackStack() }
             )
         }
     }
