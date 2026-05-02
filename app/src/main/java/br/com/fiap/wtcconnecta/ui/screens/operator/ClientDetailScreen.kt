@@ -72,7 +72,7 @@ fun ClientDetailScreen(
     taskViewModel: TaskViewModel = viewModel()
 ) {
     val uiState          by viewModel.uiState.collectAsState()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(1) }
     var noteBeingEdited  by remember { mutableStateOf<Note?>(null) }
     var noteToDelete     by remember { mutableStateOf<Note?>(null) }
 
@@ -808,10 +808,12 @@ fun ClientShortcutChip(
     }
 }
 
-@Suppress("NewApi")
 private fun formatTime(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
-    return try { createdAt.takeLast(8).take(5) } catch (e: Exception) { "" }
+    return try {
+        // createdAt: "2026-05-01T20:24:21.643..." → pega HH:mm a partir do índice 11
+        createdAt.drop(11).take(5)
+    } catch (e: Exception) { "" }
 }
 
 private fun formatCampaignDate(createdAt: String?): String {
