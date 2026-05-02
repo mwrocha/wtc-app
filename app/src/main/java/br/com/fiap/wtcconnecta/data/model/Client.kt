@@ -6,9 +6,11 @@ data class Client(
     val email: String,
     val role: String = "CLIENT",
     val phone: String? = null,
+    val cpf: String? = null,
+    val company: String? = null,
     val status: String? = null,
     val score: Int = 0,
-    val tags: List<String> = emptyList(),  // nunca null
+    val tags: List<String>? = emptyList(),  // não pode ficar null
     val divisionId: String? = null,
     val groupId: String? = null,
     val noteIds: List<String>? = emptyList(),
