@@ -24,38 +24,33 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
-    // ── Interceptor que detecta 401 e dispara logout ──────────────────────────
     private val sessionInterceptor = Interceptor { chain ->
-        val response = chain.proceed(chain.request())
+        val request = chain.request()
+        val response = chain.proceed(request)
         if (response.code == 401) {
-            // Limpa o token em memória
-            authToken = null
-            // Dispara o callback de sessão expirada na thread principal
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                onSessionExpired?.invoke()
+            val path = request.url.encodedPath
+            val isFcmEndpoint = path.contains("fcm-token")
+            if (!isFcmEndpoint) {
+                authToken = null
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    onSessionExpired?.invoke()
+                }
             }
         }
         response
     }
-
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
     private val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
-            .addInterceptor(sessionInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .build()
+        OkHttpClient.Builder().addInterceptor(authInterceptor).addInterceptor(sessionInterceptor)
+            .addInterceptor(loggingInterceptor).build()
     }
 
     val instance: ApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        Retrofit.Builder().baseUrl(BASE_URL).client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create()).build()
             .create(ApiService::class.java)
     }
 }
