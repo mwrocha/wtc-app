@@ -40,21 +40,19 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
     }
 
     private fun registerFcmToken() {
-        FirebaseMessaging.getInstance().token
-            .addOnSuccessListener { token ->
-                Log.d("AuthRepository", "FCM token obtido: $token")
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        apiService.updateFcmToken(mapOf("fcmToken" to token))
-                        Log.d("AuthRepository", "FCM token enviado ao servidor")
-                    } catch (e: Exception) {
-                        Log.e("AuthRepository", "Erro ao enviar FCM token: ${e.message}")
-                    }
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            Log.d("AuthRepository", "FCM token obtido: $token")
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    apiService.updateFcmToken(mapOf("fcmToken" to token))
+                    Log.d("AuthRepository", "FCM token enviado ao servidor")
+                } catch (e: Exception) {
+                    Log.e("AuthRepository", "Erro ao enviar FCM token: ${e.message}")
                 }
             }
-            .addOnFailureListener { e ->
-                Log.e("AuthRepository", "Erro ao obter FCM token: ${e.message}")
-            }
+        }.addOnFailureListener { e ->
+            Log.e("AuthRepository", "Erro ao obter FCM token: ${e.message}")
+        }
     }
 
     fun logout() {
@@ -76,13 +74,13 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
         return try {
             val response = apiService.register(
                 RegisterRequest(
-                    name     = name,
-                    email    = email,
+                    name = name,
+                    email = email,
                     password = password,
-                    role     = role,
-                    cpf      = cpf,
-                    phone    = phone,
-                    company  = company
+                    role = role,
+                    cpf = cpf,
+                    phone = phone,
+                    company = company
                 )
             )
             if (response.isSuccessful) {
@@ -101,23 +99,19 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
     suspend fun getClients(): List<Client> = apiService.getClients()
 
     suspend fun searchClients(
-        name: String? = null,
-        tag: String? = null,
-        groupId: String? = null
+        name: String? = null, tag: String? = null, groupId: String? = null
     ): List<Client> = apiService.searchClients(name, tag, groupId)
 
     suspend fun getClientById(id: String): Client = apiService.getClientById(id)
 
-    suspend fun createClient(client: Client): Boolean =
-        apiService.createClient(client).isSuccessful
+    suspend fun createClient(client: Client): Boolean = apiService.createClient(client).isSuccessful
 
     suspend fun updateClient(id: String, client: Client): Boolean =
         apiService.updateClient(id, client).isSuccessful
 
     // ── Perfil do cliente ────────────────────────────────────────────────────
 
-    suspend fun getClientProfile(clientId: String): Client =
-        apiService.getClientById(clientId)
+    suspend fun getClientProfile(clientId: String): Client = apiService.getClientById(clientId)
 
     suspend fun updateClientProfile(
         clientId: String,
@@ -127,12 +121,12 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
         cpf: String? = null,
         company: String? = null
     ): Boolean {
-        val client  = apiService.getClientById(clientId)
+        val client = apiService.getClientById(clientId)
         val updated = client.copy(
-            name    = name,
+            name = name,
             groupId = groupId,
-            phone   = phone ?: client.phone,
-            cpf     = cpf ?: client.cpf,
+            phone = phone ?: client.phone,
+            cpf = cpf ?: client.cpf,
             company = company ?: client.company
         )
         return apiService.updateClient(clientId, updated).isSuccessful
@@ -151,14 +145,11 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
     suspend fun getConversation(conversationId: String): List<Message> =
         apiService.getConversation(conversationId)
 
-    suspend fun getMyConversations(): List<Message> =
-        apiService.getMyConversations()
+    suspend fun getMyConversations(): List<Message> = apiService.getMyConversations()
 
-    suspend fun getUnreadMessages(): List<Message> =
-        apiService.getUnreadMessages()
+    suspend fun getUnreadMessages(): List<Message> = apiService.getUnreadMessages()
 
-    suspend fun getUnreadCount(): Int =
-        apiService.getUnreadCount().count
+    suspend fun getUnreadCount(): Int = apiService.getUnreadCount().count
 
     suspend fun sendGroupMessage(groupId: String, content: String): Boolean =
         apiService.sendGroupMessage(
@@ -174,14 +165,20 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
 
     suspend fun getUserByEmail(email: String): UserPublicDto? = try {
         apiService.getUserByEmail(email)
-    } catch (e: Exception) { null }
+    } catch (e: Exception) {
+        null
+    }
 
     // ── Mensagens de grupo (filtro local) ────────────────────────────────────
 
     suspend fun getMessagesForDivision(divisionId: String): List<Message> {
         val groupIds = getGroupsByDivision(divisionId).map { it.id }
         return groupIds.flatMap { groupId ->
-            try { apiService.getConversation(groupId) } catch (e: Exception) { emptyList() }
+            try {
+                apiService.getConversation(groupId)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 
@@ -216,8 +213,13 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
 
     suspend fun getCampaignsForClient(clientId: String): List<Message> =
         apiService.getCampaignsForClient(clientId)
-    suspend fun updateCampaign(id: String, request: CampaignRequest): Campaign = apiService.updateCampaign(id, request)
-    suspend fun createCampaign(request: CampaignRequest): Campaign = apiService.createCampaign(request)
+
+    suspend fun updateCampaign(id: String, request: CampaignRequest): Campaign =
+        apiService.updateCampaign(id, request)
+
+    suspend fun createCampaign(request: CampaignRequest): Campaign =
+        apiService.createCampaign(request)
+
     suspend fun dispatchCampaign(id: String): Campaign = apiService.dispatchCampaign(id)
 
     // ── Mensagens — editar/excluir ───────────────────────────────────────────
@@ -226,26 +228,34 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
         return try {
             val response = apiService.editMessage(id, mapOf("content" to newContent))
             if (response.isSuccessful) Result.success(Unit)
-            else Result.failure(Exception(
-                when (response.code()) {
-                    403  -> "Prazo de edição expirado (5 minutos)"
-                    else -> "Erro ao editar mensagem"
-                }
-            ))
-        } catch (e: Exception) { Result.failure(e) }
+            else Result.failure(
+                Exception(
+                    when (response.code()) {
+                        403 -> "Prazo de edição expirado (5 minutos)"
+                        else -> "Erro ao editar mensagem"
+                    }
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun deleteMessage(id: String): Result<Unit> {
         return try {
             val response = apiService.deleteMessage(id)
             if (response.isSuccessful) Result.success(Unit)
-            else Result.failure(Exception(
-                when (response.code()) {
-                    403  -> "Prazo de exclusão expirado (5 minutos)"
-                    else -> "Erro ao excluir mensagem"
-                }
-            ))
-        } catch (e: Exception) { Result.failure(e) }
+            else Result.failure(
+                Exception(
+                    when (response.code()) {
+                        403 -> "Prazo de exclusão expirado (5 minutos)"
+                        else -> "Erro ao excluir mensagem"
+                    }
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // ── Solicitação de troca de grupo ────────────────────────────────────────
@@ -256,42 +266,52 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
                 mapOf("newGroupId" to newGroupId, "reason" to reason)
             )
             response.isSuccessful
-        } catch (e: Exception) { false }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     suspend fun changeCompany(clientId: String, newCompany: String): Result<Unit> {
         return try {
-            val client  = apiService.getClientById(clientId)
+            val client = apiService.getClientById(clientId)
             val updated = client.copy(company = newCompany)
             val response = apiService.updateClient(clientId, updated)
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("Erro ao atualizar empresa (${response.code()})"))
-        } catch (e: Exception) { Result.failure(e) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun changePhone(clientId: String, newPhone: String): Result<Unit> {
         return try {
-            val client  = apiService.getClientById(clientId)
+            val client = apiService.getClientById(clientId)
             val updated = client.copy(phone = newPhone)
             val response = apiService.updateClient(clientId, updated)
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("Erro ao atualizar telefone (${response.code()})"))
-        } catch (e: Exception) { Result.failure(e) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun changeCpf(clientId: String, newCpf: String): Result<Unit> {
         return try {
-            val client  = apiService.getClientById(clientId)
+            val client = apiService.getClientById(clientId)
             val updated = client.copy(cpf = newCpf)
             val response = apiService.updateClient(clientId, updated)
             if (response.isSuccessful) Result.success(Unit)
             else Result.failure(Exception("Erro ao atualizar CPF (${response.code()})"))
-        } catch (e: Exception) { Result.failure(e) }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // ── Senha e Email ─────────────────────────────────────────────────────────
 
-    suspend fun changePassword(email: String, currentPassword: String, newPassword: String): Boolean {
+    suspend fun changePassword(
+        email: String, currentPassword: String, newPassword: String
+    ): Boolean {
         return try {
             val response = apiService.changePassword(
                 mapOf("currentPassword" to currentPassword, "newPassword" to newPassword)
@@ -310,13 +330,15 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
             if (response.isSuccessful) Result.success(Unit)
             else {
                 val code = response.code()
-                Result.failure(Exception(
-                    when (code) {
-                        409  -> "Este e-mail já está em uso"
-                        401  -> "Senha incorreta"
-                        else -> "Erro ao alterar e-mail ($code)"
-                    }
-                ))
+                Result.failure(
+                    Exception(
+                        when (code) {
+                            409 -> "Este e-mail já está em uso"
+                            401 -> "Senha incorreta"
+                            else -> "Erro ao alterar e-mail ($code)"
+                        }
+                    )
+                )
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -327,8 +349,11 @@ class AuthRepository(private val apiService: ApiService = RetrofitClient.instanc
 
     suspend fun getTasks(): List<Task> = apiService.getTasks()
     suspend fun createTask(request: TaskRequest): Task = apiService.createTask(request)
-    suspend fun getTasksByClient(clientId: String): List<Task> = apiService.getTasksByClient(clientId)
+    suspend fun getTasksByClient(clientId: String): List<Task> =
+        apiService.getTasksByClient(clientId)
+
     suspend fun updateTaskStatus(taskId: String, status: String): Task =
         apiService.updateTaskStatus(taskId, mapOf("status" to status))
+
     suspend fun deleteTask(taskId: String) = apiService.deleteTask(taskId)
 }

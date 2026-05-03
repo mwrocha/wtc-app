@@ -24,8 +24,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             WTCConnectaTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
 

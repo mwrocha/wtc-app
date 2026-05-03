@@ -67,29 +67,23 @@ class ConversationListViewModel(
 
             // Filtra apenas mensagens diretas do usuário logado — sem ID MongoDB
             val directMessages = allMessages.filter { msg ->
-                msg.type == "CHAT" &&
-                        msg.groupId == null &&
-                        !msg.conversationId.orEmpty().startsWith("campaign_") &&
-                        (msg.senderId == loggedEmail || msg.recipientId == loggedEmail)
+                msg.type == "CHAT" && msg.groupId == null && !msg.conversationId.orEmpty()
+                    .startsWith("campaign_") && (msg.senderId == loggedEmail || msg.recipientId == loggedEmail)
             }
 
             // conversationId válido: contém @ E contém o email do usuário logado
-            val real1on1ConversationId = directMessages
-                .firstOrNull {
-                    it.conversationId?.contains("@") == true &&
-                            loggedEmail != null &&
-                            it.conversationId.orEmpty().contains(loggedEmail)
-                }
-                ?.conversationId
-                ?: run {
-                    val operatorEmail = directMessages
-                        .map { if (it.senderId == loggedEmail) it.recipientId else it.senderId }
+            val real1on1ConversationId = directMessages.firstOrNull {
+                    it.conversationId?.contains("@") == true && loggedEmail != null && it.conversationId.orEmpty()
+                        .contains(loggedEmail)
+                }?.conversationId ?: run {
+                val operatorEmail =
+                    directMessages.map { if (it.senderId == loggedEmail) it.recipientId else it.senderId }
                         .firstOrNull { it?.contains("@") == true }
-                    if (operatorEmail != null && loggedEmail != null) {
-                        val sorted = listOf(loggedEmail, operatorEmail).sorted()
-                        "${sorted[0]}_${sorted[1]}"
-                    } else null
-                }
+                if (operatorEmail != null && loggedEmail != null) {
+                    val sorted = listOf(loggedEmail, operatorEmail).sorted()
+                    "${sorted[0]}_${sorted[1]}"
+                } else null
+            }
 
             Log.d("ConversationListVM", "conversationId 1:1 resolvido: $real1on1ConversationId")
 
@@ -109,13 +103,16 @@ class ConversationListViewModel(
                 if (loggedEmail != null && real1on1ConversationId.contains(loggedEmail)) {
                     val parts = real1on1ConversationId.split("_")
                     // conversationId = emailA_emailB — pega o que não é o loggedEmail
-                    val firstAt    = real1on1ConversationId.indexOf("@")
+                    val firstAt = real1on1ConversationId.indexOf("@")
                     val splitPoint = real1on1ConversationId.indexOf("_", firstAt)
                     if (splitPoint > 0) {
                         val emailA = real1on1ConversationId.substring(0, splitPoint)
                         val emailB = real1on1ConversationId.substring(splitPoint + 1)
                         val resolvedOperator = if (emailA == loggedEmail) emailB else emailA
-                        Log.d("ConversationListVM", "operatorEmail resolvido do conversationId: $resolvedOperator")
+                        Log.d(
+                            "ConversationListVM",
+                            "operatorEmail resolvido do conversationId: $resolvedOperator"
+                        )
                         _uiState.update { it.copy(operatorEmail = resolvedOperator) }
                     }
                 }
@@ -124,11 +121,14 @@ class ConversationListViewModel(
             } else {
                 // Sem histórico 1:1 — tenta descobrir operador pelo grupo
                 val groupMessages = _uiState.value.groups.flatMap { group ->
-                    try { repository.getConversation(group.id) } catch (e: Exception) { emptyList() }
+                    try {
+                        repository.getConversation(group.id)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 }
-                val operatorEmail = groupMessages
-                    .firstOrNull { it.senderId != loggedEmail && it.senderId.contains("@") }
-                    ?.senderId
+                val operatorEmail =
+                    groupMessages.firstOrNull { it.senderId != loggedEmail && it.senderId.contains("@") }?.senderId
                 if (operatorEmail != null) {
                     _uiState.update { it.copy(operatorEmail = operatorEmail) }
                 }
@@ -158,21 +158,19 @@ class ConversationListViewModel(
         return try {
             val payload = token.split(".")[1]
             val decoded = android.util.Base64.decode(
-                payload.padEnd((payload.length + 3) / 4 * 4, '='),
-                android.util.Base64.URL_SAFE
+                payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
             )
             val json = String(decoded)
             val start = json.indexOf("\"sub\"") + 7
             val end = json.indexOf("\"", start)
             if (start > 6 && end > start) json.substring(start, end) else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private suspend fun checkNewMessages(
-        messages: List<Message>,
-        chatId: String,
-        chatName: String,
-        loggedEmail: String?
+        messages: List<Message>, chatId: String, chatName: String, loggedEmail: String?
     ) {
         val lastMessage = messages.lastOrNull() ?: return
         val lastKnownId = _uiState.value.lastMessageIds[chatId]

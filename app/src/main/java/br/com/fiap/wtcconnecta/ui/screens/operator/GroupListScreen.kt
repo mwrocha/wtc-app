@@ -34,13 +34,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
@@ -58,15 +58,21 @@ class GroupListViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(GroupListUiState())
     val uiState = _uiState.asStateFlow()
 
-    init { load() }
+    init {
+        load()
+    }
 
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val groups    = RetrofitClient.instance.getGroups()
+                val groups = RetrofitClient.instance.getGroups()
                 val divisions = RetrofitClient.instance.getDivisions()
-                _uiState.update { it.copy(isLoading = false, groups = groups, divisions = divisions) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, groups = groups, divisions = divisions
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar grupos.") }
             }
@@ -87,13 +93,16 @@ class GroupListViewModel : ViewModel() {
                         GroupMessageRequest(groupId = group.id, body = text)
                     )
                     successCount++
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
-            _uiState.update { it.copy(
-                isSending   = false,
-                sendSuccess = successCount > 0,
-                error       = if (successCount == 0) "Erro ao enviar para os grupos." else null
-            ) }
+            _uiState.update {
+                it.copy(
+                    isSending = false,
+                    sendSuccess = successCount > 0,
+                    error = if (successCount == 0) "Erro ao enviar para os grupos." else null
+                )
+            }
         }
     }
 
@@ -113,7 +122,9 @@ class GroupListViewModel : ViewModel() {
         }
     }
 
-    fun clearStatus() { _uiState.update { it.copy(sendSuccess = false, error = null) } }
+    fun clearStatus() {
+        _uiState.update { it.copy(sendSuccess = false, error = null) }
+    }
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -142,6 +153,7 @@ fun GroupListScreen(
                 snackbarHostState.showSnackbar("Mensagem enviada com sucesso!")
                 viewModel.clearStatus()
             }
+
             uiState.error != null -> {
                 snackbarHostState.showSnackbar(uiState.error ?: "Erro")
                 viewModel.clearStatus()
@@ -150,10 +162,13 @@ fun GroupListScreen(
     }
 
     Scaffold(
-        snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF0F6FA)
+        snackbarHost = { SnackbarHost(snackbarHostState) }, containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             // ── Header ────────────────────────────────────────────────────────
             Box(
@@ -169,25 +184,39 @@ fun GroupListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = Color.White
+                        )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Grupos e Divisões", fontWeight = FontWeight.Bold,
-                            color = Color.White, fontSize = 20.sp)
-                        Text("Chat por grupo ou disparo por divisão",
-                            fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f))
+                        Text(
+                            "Grupos e Divisões",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            "Chat por grupo ou disparo por divisão",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.65f)
+                        )
                     }
                     // Botão de disparo em massa
                     IconButton(
-                        onClick  = { showDivisionDialog = true },
+                        onClick = { showDivisionDialog = true },
                         modifier = Modifier
                             .size(40.dp)
                             .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Enviar para divisão",
-                            tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = "Enviar para divisão",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -197,16 +226,24 @@ fun GroupListScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 uiState.groups.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Group, contentDescription = null,
-                            tint = WtcBlueHint, modifier = Modifier.size(56.dp))
+                        Icon(
+                            Icons.Default.Group,
+                            contentDescription = null,
+                            tint = WtcBlueHint,
+                            modifier = Modifier.size(56.dp)
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text("Nenhum grupo cadastrado.", color = TextMuted, fontSize = 14.sp)
                     }
                 }
+
                 else -> LazyColumn(
-                    modifier       = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
                     contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -225,9 +262,9 @@ fun GroupListScreen(
                                 ) {
                                     Text(
                                         division.name.uppercase(),
-                                        fontSize     = 11.sp,
-                                        fontWeight   = FontWeight.Bold,
-                                        color        = TextMuted,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextMuted,
                                         letterSpacing = 1.2.sp
                                     )
                                     // Botão de disparo rápido para esta divisão
@@ -235,29 +272,36 @@ fun GroupListScreen(
                                         onClick = {
                                             selectedDivisionForDispatch = division
                                             showDivisionDialog = true
-                                        },
-                                        color  = WtcBluePale,
-                                        shape  = RoundedCornerShape(8.dp)
+                                        }, color = WtcBluePale, shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                            modifier = Modifier.padding(
+                                                horizontal = 10.dp, vertical = 5.dp
+                                            ),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(Icons.Default.Send, contentDescription = null,
-                                                tint = WtcBlue, modifier = Modifier.size(12.dp))
-                                            Text("Disparar para divisão", fontSize = 11.sp,
-                                                color = WtcBlue, fontWeight = FontWeight.Medium)
+                                            Icon(
+                                                Icons.Default.Send,
+                                                contentDescription = null,
+                                                tint = WtcBlue,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                            Text(
+                                                "Disparar para divisão",
+                                                fontSize = 11.sp,
+                                                color = WtcBlue,
+                                                fontWeight = FontWeight.Medium
+                                            )
                                         }
                                     }
                                 }
                             }
                             items(divGroups) { group ->
                                 GroupListCard(
-                                    group    = group,
+                                    group = group,
                                     division = division.name,
-                                    onClick  = { onGroupClick(group.id, group.name) }
-                                )
+                                    onClick = { onGroupClick(group.id, group.name) })
                             }
                         }
                     }
@@ -266,16 +310,20 @@ fun GroupListScreen(
                     val noDivisionGroups = groupsByDivision["sem_divisao"] ?: emptyList()
                     if (noDivisionGroups.isNotEmpty()) {
                         item {
-                            Text("SEM DIVISÃO", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                color = TextMuted, letterSpacing = 1.2.sp,
-                                modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
+                            Text(
+                                "SEM DIVISÃO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.2.sp,
+                                modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
+                            )
                         }
                         items(noDivisionGroups) { group ->
                             GroupListCard(
-                                group    = group,
+                                group = group,
                                 division = "",
-                                onClick  = { onGroupClick(group.id, group.name) }
-                            )
+                                onClick = { onGroupClick(group.id, group.name) })
                         }
                     }
                 }
@@ -286,9 +334,9 @@ fun GroupListScreen(
     // ── Dialog de disparo em massa ────────────────────────────────────────────
     if (showDivisionDialog) {
         DivisionBroadcastDialog(
-            divisions          = uiState.divisions,
+            divisions = uiState.divisions,
             preSelectedDivision = selectedDivisionForDispatch,
-            isSending          = uiState.isSending,
+            isSending = uiState.isSending,
             onDismiss = {
                 showDivisionDialog = false
                 selectedDivisionForDispatch = null
@@ -297,8 +345,7 @@ fun GroupListScreen(
                 viewModel.sendToDivision(text, divisionId)
                 showDivisionDialog = false
                 selectedDivisionForDispatch = null
-            }
-        )
+            })
     }
 }
 
@@ -313,21 +360,21 @@ fun DivisionBroadcastDialog(
     onDismiss: () -> Unit,
     onSendToDivision: (text: String, divisionId: String) -> Unit
 ) {
-    var messageText      by remember { mutableStateOf("") }
+    var messageText by remember { mutableStateOf("") }
     var selectedDivision by remember { mutableStateOf(preSelectedDivision) }
-    var expanded         by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
     val uploadViewModel: ImageUploadViewModel = viewModel()
     val uploadState by uploadViewModel.uiState.collectAsState()
-    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
-    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileUri by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey by remember { mutableStateOf<String?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
-    var pendingIsPdf    by remember { mutableStateOf(false) }
+    var pendingIsPdf by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor   = Color.White,
-        shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
         Column(
             modifier = Modifier
@@ -337,12 +384,22 @@ fun DivisionBroadcastDialog(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Título
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.Send, contentDescription = null,
-                    tint = WtcBlue, modifier = Modifier.size(20.dp))
-                Text("Disparar para Divisão", fontWeight = FontWeight.Bold,
-                    color = TextPrimary, fontSize = 16.sp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Send,
+                    contentDescription = null,
+                    tint = WtcBlue,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    "Disparar para Divisão",
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    fontSize = 16.sp
+                )
             }
 
             HorizontalDivider(color = Color(0xFFF0F6FA))
@@ -354,37 +411,42 @@ fun DivisionBroadcastDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Info, contentDescription = null,
-                        tint = WtcBlue, modifier = Modifier.size(16.dp))
-                    Text("A mensagem será enviada para todos os grupos desta divisão.",
-                        fontSize = 12.sp, color = WtcBlue)
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = WtcBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "A mensagem será enviada para todos os grupos desta divisão.",
+                        fontSize = 12.sp,
+                        color = WtcBlue
+                    )
                 }
             }
 
             // Dropdown de divisão
             ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
+                expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                 OutlinedTextField(
                     value = selectedDivision?.name ?: "Selecione uma divisão...",
-                    onValueChange = {}, readOnly = true,
+                    onValueChange = {},
+                    readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = WtcBlue,
-                        unfocusedBorderColor = WtcBlueHint)
+                        focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint
+                    )
                 )
                 ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
+                    expanded = expanded, onDismissRequest = { expanded = false }) {
                     divisions.forEach { division ->
                         DropdownMenuItem(
                             text = { Text(division.name) },
-                            onClick = { selectedDivision = division; expanded = false }
-                        )
+                            onClick = { selectedDivision = division; expanded = false })
                     }
                 }
             }
@@ -394,30 +456,29 @@ fun DivisionBroadcastDialog(
                 value = messageText,
                 onValueChange = { messageText = it },
                 label = { Text("Mensagem (opcional se houver anexo)") },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp),
                 minLines = 3,
                 maxLines = Int.MAX_VALUE,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = WtcBlue,
+                    focusedBorderColor = WtcBlue,
                     unfocusedBorderColor = WtcBlueHint,
-                    cursorColor          = WtcBlue)
+                    cursorColor = WtcBlue
+                )
             )
 
             // Preview do arquivo pendente
             pendingFileUri?.let { uri ->
                 ImagePreviewBar(
-                    imageUrl = uri,
-                    isPdf    = pendingIsPdf,
-                    fileName = pendingFileName,
-                    onCancel = {
-                        pendingFileUri  = null
-                        pendingFileKey  = null
+                    imageUrl = uri, isPdf = pendingIsPdf, fileName = pendingFileName, onCancel = {
+                        pendingFileUri = null
+                        pendingFileKey = null
                         pendingFileName = null
-                        pendingIsPdf    = false
+                        pendingIsPdf = false
                         uploadViewModel.reset()
-                    }
-                )
+                    })
             }
 
             // Linha inferior: botão de anexo + botão disparar
@@ -431,18 +492,15 @@ fun DivisionBroadcastDialog(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(13.dp))
-                        .background(WtcBluePale),
-                    contentAlignment = Alignment.Center
+                        .background(WtcBluePale), contentAlignment = Alignment.Center
                 ) {
                     ImagePickerButton(
-                        uploadViewModel = uploadViewModel,
-                        onImageReady    = { url, key ->
-                            pendingFileUri  = url
-                            pendingFileKey  = key
-                            pendingIsPdf    = key.endsWith(".pdf", ignoreCase = true)
+                        uploadViewModel = uploadViewModel, onImageReady = { url, key ->
+                            pendingFileUri = url
+                            pendingFileKey = key
+                            pendingIsPdf = key.endsWith(".pdf", ignoreCase = true)
                             pendingFileName = uploadState.fileName
-                        }
-                    )
+                        })
                 }
 
                 // Botão disparar
@@ -461,18 +519,23 @@ fun DivisionBroadcastDialog(
                         }
                         onSendToDivision(finalText, selectedDivision!!.id)
                     },
-                    enabled = (messageText.isNotBlank() || pendingFileKey != null)
-                            && selectedDivision != null && !isSending,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape  = RoundedCornerShape(12.dp),
+                    enabled = (messageText.isNotBlank() || pendingFileKey != null) && selectedDivision != null && !isSending,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
                 ) {
                     if (isSending) {
-                        CircularProgressIndicator(color = Color.White,
-                            modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp
+                        )
                     } else {
-                        Icon(Icons.Default.Send, contentDescription = null,
-                            modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Disparar para divisão", fontWeight = FontWeight.SemiBold)
                     }
@@ -486,48 +549,64 @@ fun DivisionBroadcastDialog(
 
 @Composable
 fun GroupListCard(
-    group: Group,
-    division: String,
-    onClick: () -> Unit
+    group: Group, division: String, onClick: () -> Unit
 ) {
     Card(
-        onClick   = onClick,
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(RoundedCornerShape(13.dp))
-                    .background(WtcBluePale),
-                contentAlignment = Alignment.Center
+                    .background(WtcBluePale), contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Group, contentDescription = null,
-                    tint = WtcBlue, modifier = Modifier.size(22.dp))
+                Icon(
+                    Icons.Default.Group,
+                    contentDescription = null,
+                    tint = WtcBlue,
+                    modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(group.name, fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(
+                    group.name,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
                 if (division.isNotBlank()) {
-                    Text(division, fontSize = 12.sp,
-                        color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                    Text(
+                        division,
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
             }
             // Ícone de chat indicando que é clicável para conversar
             Box(
-                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(10.dp))
-                    .background(WtcBluePale),
-                contentAlignment = Alignment.Center
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(WtcBluePale), contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Chat, contentDescription = null,
-                    tint = WtcBlue, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Chat,
+                    contentDescription = null,
+                    tint = WtcBlue,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

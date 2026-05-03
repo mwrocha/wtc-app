@@ -23,18 +23,19 @@ data class HomeOperatorUiState(
     val error: String? = null
 )
 
-class HomeOperatorViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
+class HomeOperatorViewModel(private val repository: AuthRepository = AuthRepository()) :
+    ViewModel() {
 
-    private val _allClients       = MutableStateFlow<List<Client>>(emptyList())
-    private val _searchQuery      = MutableStateFlow("")
-    private val _selectedTags     = MutableStateFlow<Set<String>>(emptySet())
+    private val _allClients = MutableStateFlow<List<Client>>(emptyList())
+    private val _searchQuery = MutableStateFlow("")
+    private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
     private val _selectedDivision = MutableStateFlow<Division?>(null)
-    private val _selectedGroup    = MutableStateFlow<Group?>(null)
+    private val _selectedGroup = MutableStateFlow<Group?>(null)
 
-    val searchQuery      = _searchQuery.asStateFlow()
-    val selectedTags     = _selectedTags.asStateFlow()
+    val searchQuery = _searchQuery.asStateFlow()
+    val selectedTags = _selectedTags.asStateFlow()
     val selectedDivision = _selectedDivision.asStateFlow()
-    val selectedGroup    = _selectedGroup.asStateFlow()
+    val selectedGroup = _selectedGroup.asStateFlow()
 
     private val _uiState = MutableStateFlow(HomeOperatorUiState())
     val uiState = _uiState.asStateFlow()
@@ -44,32 +45,25 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
 
         viewModelScope.launch {
             combine(
-                _allClients,
-                _searchQuery,
-                _selectedTags,
-                _selectedDivision,
-                _selectedGroup
+                _allClients, _searchQuery, _selectedTags, _selectedDivision, _selectedGroup
             ) { clients, query, tags, division, group ->
 
                 var filtered = clients
 
                 // Filtro por nome
-                if (query.isNotBlank())
-                    filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
+                if (query.isNotBlank()) filtered =
+                    filtered.filter { it.name.contains(query, ignoreCase = true) }
 
                 // Filtro por divisão
-                if (division != null)
-                    filtered = filtered.filter { it.divisionId == division.id }
+                if (division != null) filtered = filtered.filter { it.divisionId == division.id }
 
                 // Filtro por grupo (só aplica se divisão também estiver selecionada)
-                if (group != null)
-                    filtered = filtered.filter { it.groupId == group.id }
+                if (group != null) filtered = filtered.filter { it.groupId == group.id }
 
                 // Filtro por tags (todas as tags selecionadas devem estar presentes)
-                if (tags.isNotEmpty())
-                    filtered = filtered.filter { client ->
-                        tags.all { tag -> client.tags.orEmpty().contains(tag) }
-                    }
+                if (tags.isNotEmpty()) filtered = filtered.filter { client ->
+                    tags.all { tag -> client.tags.orEmpty().contains(tag) }
+                }
 
                 filtered
             }.collect { filteredClients ->
@@ -107,10 +101,7 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
     }
 
     val hasActiveFilters: Boolean
-        get() = _searchQuery.value.isNotBlank()
-                || _selectedTags.value.isNotEmpty()
-                || _selectedDivision.value != null
-                || _selectedGroup.value != null
+        get() = _searchQuery.value.isNotBlank() || _selectedTags.value.isNotEmpty() || _selectedDivision.value != null || _selectedGroup.value != null
 
     // ── Dados ─────────────────────────────────────────────────────────────────
 
@@ -118,12 +109,12 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val clientsDeferred   = async { repository.getClients() }
-                val groupsDeferred    = async { repository.getGroups() }
+                val clientsDeferred = async { repository.getClients() }
+                val groupsDeferred = async { repository.getGroups() }
                 val divisionsDeferred = async { repository.getDivisions() }
 
-                val clients   = clientsDeferred.await()
-                val groups    = groupsDeferred.await()
+                val clients = clientsDeferred.await()
+                val groups = groupsDeferred.await()
                 val divisions = divisionsDeferred.await()
 
                 _allClients.value = clients
@@ -132,10 +123,10 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
 
                 _uiState.update {
                     it.copy(
-                        isLoading     = false,
+                        isLoading = false,
                         availableTags = allTags,
-                        groups        = groups,
-                        divisions     = divisions
+                        groups = groups,
+                        divisions = divisions
                     )
                 }
             } catch (e: Exception) {
@@ -147,7 +138,9 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    fun retryFetch() { fetchAllData() }
+    fun retryFetch() {
+        fetchAllData()
+    }
 
     // ── Mensagens de grupo ────────────────────────────────────────────────────
 
@@ -155,8 +148,7 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
         viewModelScope.launch {
             try {
                 val success = repository.sendGroupMessage(groupId = groupId, content = text)
-                if (!success)
-                    _uiState.update { it.copy(error = "Falha ao enviar mensagem para o grupo.") }
+                if (!success) _uiState.update { it.copy(error = "Falha ao enviar mensagem para o grupo.") }
             } catch (e: Exception) {
                 Log.e("HomeOperatorViewModel", "Falha ao enviar mensagem de grupo: ${e.message}")
                 _uiState.update { it.copy(error = "Falha ao enviar mensagem.") }
@@ -179,14 +171,18 @@ class HomeOperatorViewModel(private val repository: AuthRepository = AuthReposit
                     if (!success) failures++
                 } catch (e: Exception) {
                     failures++
-                    Log.e("HomeOperatorViewModel", "Falha ao enviar para grupo ${group.id}: ${e.message}")
+                    Log.e(
+                        "HomeOperatorViewModel",
+                        "Falha ao enviar para grupo ${group.id}: ${e.message}"
+                    )
                 }
             }
 
-            if (failures > 0)
-                _uiState.update { it.copy(error = "Mensagem enviada com $failures falha(s).") }
+            if (failures > 0) _uiState.update { it.copy(error = "Mensagem enviada com $failures falha(s).") }
         }
     }
 
-    fun clearError() { _uiState.update { it.copy(error = null) } }
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
 }

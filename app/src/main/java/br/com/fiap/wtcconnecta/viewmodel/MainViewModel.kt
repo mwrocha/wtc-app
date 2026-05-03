@@ -19,9 +19,9 @@ class MainViewModel : ViewModel() {
     fun onLoginSuccess(result: LoginResult) {
         _userSession.update {
             UserSession(
-                id    = result.userId,
-                role  = result.role,
-                name  = result.name,
+                id = result.userId,
+                role = result.role,
+                name = result.name,
                 email = result.email   // precisa existir no LoginResult
             )
         }

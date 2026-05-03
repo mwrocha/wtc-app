@@ -29,12 +29,13 @@ private fun getRoleFromToken(token: String?): String? {
     return try {
         val payload = token.split(".")[1]
         val decoded = android.util.Base64.decode(
-            payload.padEnd((payload.length + 3) / 4 * 4, '='),
-            android.util.Base64.URL_SAFE
+            payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
         )
         val json = String(decoded)
         Regex("\"role\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
-    } catch (e: Exception) { null }
+    } catch (e: Exception) {
+        null
+    }
 }
 
 private fun getEmailFromToken(token: String?): String? {
@@ -42,37 +43,38 @@ private fun getEmailFromToken(token: String?): String? {
     return try {
         val payload = token.split(".")[1]
         val decoded = android.util.Base64.decode(
-            payload.padEnd((payload.length + 3) / 4 * 4, '='),
-            android.util.Base64.URL_SAFE
+            payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
         )
         val json = String(decoded)
         Regex("\"sub\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
-    } catch (e: Exception) { null }
+    } catch (e: Exception) {
+        null
+    }
 }
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 
 @Composable
 fun InAppNotificationBanner(navController: NavController? = null) {
-    val notification  by InAppNotificationState.notification.collectAsState()
-    val isLoggedIn    = RetrofitClient.authToken != null
-    val isOperator    = getRoleFromToken(RetrofitClient.authToken) == "OPERATOR"
+    val notification by InAppNotificationState.notification.collectAsState()
+    val isLoggedIn = RetrofitClient.authToken != null
+    val isOperator = getRoleFromToken(RetrofitClient.authToken) == "OPERATOR"
     val operatorEmail = getEmailFromToken(RetrofitClient.authToken)
-    val scope         = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
         visible = notification != null && isLoggedIn,
-        enter   = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-        exit    = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
     ) {
         notification?.let { notif ->
 
             val (icon, accentColor) = when (notif.type) {
-                "CAMPAIGN"      -> Icons.Default.Campaign  to Color(0xFF1A7A5E)
-                "GROUP"         -> Icons.Default.Group     to WtcBlueSoft
-                "GROUP_REQUEST" -> Icons.Default.GroupAdd  to Color(0xFFE65100)
-                else            -> Icons.Default.Chat      to WtcBlue
+                "CAMPAIGN" -> Icons.Default.Campaign to Color(0xFF1A7A5E)
+                "GROUP" -> Icons.Default.Group to WtcBlueSoft
+                "GROUP_REQUEST" -> Icons.Default.GroupAdd to Color(0xFFE65100)
+                else -> Icons.Default.Chat to WtcBlue
             }
 
             Box(
@@ -84,8 +86,7 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                     .clickable {
                         if (navController != null) {
                             when {
-                                notif.chatType == "group_request" ->
-                                    navController.navigate("group_requests")
+                                notif.chatType == "group_request" -> navController.navigate("group_requests")
 
                                 // Operador com push DIRECT:
                                 // verifica se já assumiu → vai ao ClientDetail
@@ -94,11 +95,12 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                                     scope.launch {
                                         try {
                                             val conversationId = notif.chatId
-                                            val status = RetrofitClient.instance
-                                                .getConversationStatus(conversationId)
+                                            val status =
+                                                RetrofitClient.instance.getConversationStatus(
+                                                    conversationId
+                                                )
 
-                                            if (status.status == "IN_PROGRESS" &&
-                                                status.assignedOperatorEmail == operatorEmail) {
+                                            if (status.status == "IN_PROGRESS" && status.assignedOperatorEmail == operatorEmail) {
                                                 // Já assumiu → extrai email do cliente
                                                 // e busca o clientId para navegar
                                                 val mid = conversationId.indexOf(
@@ -106,11 +108,12 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                                                 )
                                                 val emailA = conversationId.substring(0, mid)
                                                 val emailB = conversationId.substring(mid + 1)
-                                                val clientEmail = if (emailA != operatorEmail)
-                                                    emailA else emailB
+                                                val clientEmail =
+                                                    if (emailA != operatorEmail) emailA else emailB
 
                                                 val clients = RetrofitClient.instance.getClients()
-                                                val client  = clients.find { it.email == clientEmail }
+                                                val client =
+                                                    clients.find { it.email == clientEmail }
                                                 if (client != null) {
                                                     navController.navigate(
                                                         Routes.ClientDetail.createRoute(client.id)
@@ -129,20 +132,20 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                                 }
 
                                 // Cliente, grupo, campanha → navega normalmente
-                                notif.chatId.isNotBlank() ->
-                                    navController.navigate(
-                                        "chat/${notif.chatId}/${notif.chatName}/${notif.chatType}"
-                                    )
+                                notif.chatId.isNotBlank() -> navController.navigate(
+                                    "chat/${notif.chatId}/${notif.chatName}/${notif.chatType}"
+                                )
                             }
                         }
                         InAppNotificationState.dismiss()
-                    }
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(accentColor)
-                    .align(Alignment.TopCenter))
+                    }) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(accentColor)
+                        .align(Alignment.TopCenter)
+                )
 
                 Row(
                     modifier = Modifier
@@ -157,26 +160,40 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                             .background(accentColor.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(icon, contentDescription = null,
-                            tint = accentColor, modifier = Modifier.size(22.dp))
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(notif.title, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0D2B3E), maxLines = 1,
-                            overflow = TextOverflow.Ellipsis)
+                        Text(
+                            notif.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0D2B3E),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         if (notif.body.isNotBlank()) {
-                            Text(notif.body, fontSize = 12.sp,
-                                color = Color(0xFF6E90A0), maxLines = 2,
+                            Text(
+                                notif.body,
+                                fontSize = 12.sp,
+                                color = Color(0xFF6E90A0),
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 2.dp))
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
                         }
                         Text(
                             if (isOperator && notif.type == "DIRECT") "Toque para abrir o chat"
                             else "Toque para abrir",
-                            fontSize = 10.sp, color = accentColor,
+                            fontSize = 10.sp,
+                            color = accentColor,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(top = 3.dp)
                         )
@@ -188,8 +205,12 @@ fun InAppNotificationBanner(navController: NavController? = null) {
                         onClick = { InAppNotificationState.dismiss() },
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Fechar",
-                            tint = Color(0xFF6E90A0), modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Fechar",
+                            tint = Color(0xFF6E90A0),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }

@@ -48,13 +48,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 private val IMG_REGEX = Regex("""\[img:(images/[^\]]+)]""")
 private val PDF_REGEX = Regex("""\[pdf:(images/[^\]]+)]""")
@@ -95,22 +95,23 @@ class GroupChatViewModel(
 
             // Resolve nomes dos remetentes
             val knownIds = _uiState.value.senderNames.keys
-            val unknown  = messages.map { it.senderId }
-                .filter { it.isNotBlank() && it !in knownIds }.distinct()
+            val unknown = messages.map { it.senderId }.filter { it.isNotBlank() && it !in knownIds }
+                .distinct()
             val newNames = mutableMapOf<String, String>()
             for (id in unknown) {
                 try {
                     val user = repository.getUserByEmail(id)
                     if (user != null) newNames[id] = user.name
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
 
             _uiState.update {
                 it.copy(
-                    isLoading   = false,
-                    messages    = messages.sortedBy { m -> m.createdAt },
+                    isLoading = false,
+                    messages = messages.sortedBy { m -> m.createdAt },
                     senderNames = it.senderNames + newNames,
-                    error       = null
+                    error = null
                 )
             }
         } catch (e: Exception) {
@@ -123,7 +124,10 @@ class GroupChatViewModel(
             while (true) {
                 delay(5_000)
                 if (currentGroupId.isNotBlank()) {
-                    try { fetchMessages() } catch (_: Exception) {}
+                    try {
+                        fetchMessages()
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -145,42 +149,41 @@ class GroupChatViewModel(
 
     fun editMessage(messageId: String, newContent: String) {
         viewModelScope.launch {
-            repository.editMessage(messageId, newContent)
-                .onSuccess {
-                    _uiState.update { state ->
-                        state.copy(messages = state.messages.map { msg ->
-                            if (msg.id == messageId) msg.copy(contentRaw = newContent, edited = true)
-                            else msg
-                        })
-                    }
+            repository.editMessage(messageId, newContent).onSuccess {
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.map { msg ->
+                        if (msg.id == messageId) msg.copy(
+                            contentRaw = newContent, edited = true
+                        )
+                        else msg
+                    })
                 }
-                .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message ?: "Erro ao editar mensagem") }
-                }
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message ?: "Erro ao editar mensagem") }
+            }
         }
     }
 
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
-            repository.deleteMessage(messageId)
-                .onSuccess {
-                    _uiState.update { state ->
-                        state.copy(messages = state.messages.filter { it.id != messageId })
-                    }
+            repository.deleteMessage(messageId).onSuccess {
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.filter { it.id != messageId })
                 }
-                .onFailure { e ->
-                    _uiState.update { it.copy(error = e.message ?: "Erro ao excluir mensagem") }
-                }
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message ?: "Erro ao excluir mensagem") }
+            }
         }
     }
 
-    fun getSenderName(senderId: String): String =
-        _uiState.value.senderNames[senderId] ?: senderId
+    fun getSenderName(senderId: String): String = _uiState.value.senderNames[senderId] ?: senderId
 
     fun isFromCurrentOperator(senderId: String): Boolean =
         senderId.equals(currentOperatorId, ignoreCase = true)
 
-    fun clearError() { _uiState.update { it.copy(error = null) } }
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -193,21 +196,21 @@ fun GroupChatScreen(
     operatorId: String,
     onBack: () -> Unit,
     viewModel: GroupChatViewModel = viewModel(),
-    taskViewModel: TaskViewModel  = viewModel()
+    taskViewModel: TaskViewModel = viewModel()
 ) {
-    val uiState     by viewModel.uiState.collectAsState()
-    val context      = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    var messageText     by remember { mutableStateOf("") }
-    var replyTo         by remember { mutableStateOf<Message?>(null) }
+    var messageText by remember { mutableStateOf("") }
+    var replyTo by remember { mutableStateOf<Message?>(null) }
     var messageToDelete by remember { mutableStateOf<Message?>(null) }
 
     val uploadViewModel: ImageUploadViewModel = viewModel()
     val uploadState by uploadViewModel.uiState.collectAsState()
-    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
-    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileUri by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey by remember { mutableStateOf<String?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
-    var pendingIsPdf    by remember { mutableStateOf(false) }
+    var pendingIsPdf by remember { mutableStateOf(false) }
 
     LaunchedEffect(groupId) {
         viewModel.load(groupId, operatorId)
@@ -215,7 +218,11 @@ fun GroupChatScreen(
     }
 
     Scaffold(containerColor = Color(0xFFF0F6FA)) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             // ── Header ────────────────────────────────────────────────────────
             Box(
@@ -231,8 +238,11 @@ fun GroupChatScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar", tint = Color.White)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = Color.White
+                        )
                     }
                     Box(
                         modifier = Modifier
@@ -241,15 +251,27 @@ fun GroupChatScreen(
                             .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Group, contentDescription = null,
-                            tint = Color.White, modifier = Modifier.size(22.dp))
+                        Icon(
+                            Icons.Default.Group,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(groupName, fontWeight = FontWeight.Bold,
-                            color = Color.White, fontSize = 18.sp, maxLines = 1)
-                        Text("Chat do grupo", fontSize = 13.sp,
-                            color = Color.White.copy(alpha = 0.65f))
+                        Text(
+                            groupName,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            maxLines = 1
+                        )
+                        Text(
+                            "Chat do grupo",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.65f)
+                        )
                     }
                 }
             }
@@ -259,103 +281,131 @@ fun GroupChatScreen(
                 uiState.isLoading -> Box(Modifier.weight(1f), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 uiState.messages.isEmpty() -> Box(Modifier.weight(1f), Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Forum, contentDescription = null,
-                            tint = WtcBlueHint, modifier = Modifier.size(56.dp))
+                        Icon(
+                            Icons.Default.Forum,
+                            contentDescription = null,
+                            tint = WtcBlueHint,
+                            modifier = Modifier.size(56.dp)
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text("Nenhuma mensagem ainda", color = TextMuted, fontSize = 14.sp)
-                        Text("Seja o primeiro a escrever para o grupo!",
-                            color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text(
+                            "Seja o primeiro a escrever para o grupo!",
+                            color = TextMuted.copy(alpha = 0.6f),
+                            fontSize = 12.sp
+                        )
                     }
                 }
+
                 else -> LazyColumn(
-                    modifier      = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     reverseLayout = true
                 ) {
                     items(uiState.messages.reversed()) { message ->
-                        val isOwn    = viewModel.isFromCurrentOperator(message.senderId)
+                        val isOwn = viewModel.isFromCurrentOperator(message.senderId)
                         val imgMatch = IMG_REGEX.find(message.displayContent)
                         val pdfMatch = PDF_REGEX.find(message.displayContent)
 
                         when {
                             imgMatch != null -> {
                                 val objectKey = imgMatch.groupValues[1]
-                                val caption   = message.displayContent.replace(imgMatch.value, "").trim()
-                                var imageUrl  by remember(objectKey) { mutableStateOf("") }
+                                val caption =
+                                    message.displayContent.replace(imgMatch.value, "").trim()
+                                var imageUrl by remember(objectKey) { mutableStateOf("") }
                                 LaunchedEffect(objectKey) {
                                     try {
-                                        val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                        val resp =
+                                            RetrofitClient.instance.getPresignedUrl(objectKey)
                                         if (resp.isSuccessful) imageUrl = resp.body()?.url ?: ""
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                                 SwipeableMessageBubble(
-                                    message           = message,
+                                    message = message,
                                     isFromCurrentUser = isOwn,
-                                    senderName        = viewModel.getSenderName(message.senderId),
-                                    clientId          = groupId,
-                                    clientName        = groupName,
-                                    onReply           = { replyTo = it },
-                                    onCreateTask      = { req: TaskRequest -> taskViewModel.createTask(req) },
-                                    onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                                    senderName = viewModel.getSenderName(message.senderId),
+                                    clientId = groupId,
+                                    clientName = groupName,
+                                    onReply = { replyTo = it },
+                                    onCreateTask = { req: TaskRequest ->
+                                        taskViewModel.createTask(
+                                            req
+                                        )
+                                    },
+                                    onDelete = if (isOwn) ({ messageToDelete = message }) else null
                                 ) {
                                     ImageMessageBubble(
-                                        imageUrl          = imageUrl,
-                                        caption           = caption.ifBlank { null },
+                                        imageUrl = imageUrl,
+                                        caption = caption.ifBlank { null },
                                         isFromCurrentUser = isOwn
                                     )
                                 }
                             }
+
                             pdfMatch != null -> {
                                 val objectKey = pdfMatch.groupValues[1]
-                                val fileName  = message.displayContent
-                                    .replace(pdfMatch.value, "").trim()
-                                    .ifBlank { objectKey.substringAfterLast("/") }
+                                val fileName =
+                                    message.displayContent.replace(pdfMatch.value, "").trim()
+                                        .ifBlank { objectKey.substringAfterLast("/") }
                                 var pdfUrl by remember(objectKey) { mutableStateOf("") }
                                 LaunchedEffect(objectKey) {
                                     try {
-                                        val resp = RetrofitClient.instance.getPresignedUrl(objectKey)
+                                        val resp =
+                                            RetrofitClient.instance.getPresignedUrl(objectKey)
                                         if (resp.isSuccessful) pdfUrl = resp.body()?.url ?: ""
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                                 SwipeableMessageBubble(
-                                    message           = message,
+                                    message = message,
                                     isFromCurrentUser = isOwn,
-                                    senderName        = viewModel.getSenderName(message.senderId),
-                                    clientId          = groupId,
-                                    clientName        = groupName,
-                                    onReply           = { replyTo = it },
-                                    onCreateTask      = { req: TaskRequest -> taskViewModel.createTask(req) },
-                                    onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                                    senderName = viewModel.getSenderName(message.senderId),
+                                    clientId = groupId,
+                                    clientName = groupName,
+                                    onReply = { replyTo = it },
+                                    onCreateTask = { req: TaskRequest ->
+                                        taskViewModel.createTask(
+                                            req
+                                        )
+                                    },
+                                    onDelete = if (isOwn) ({ messageToDelete = message }) else null
                                 ) {
                                     PdfMessageBubble(
-                                        fileName          = fileName,
-                                        isFromCurrentUser = isOwn,
-                                        onOpen            = {
+                                        fileName = fileName, isFromCurrentUser = isOwn, onOpen = {
                                             if (pdfUrl.isNotBlank()) {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                                val intent =
+                                                    Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
                                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                 context.startActivity(intent)
                                             }
-                                        }
-                                    )
+                                        })
                                 }
                             }
+
                             else -> {
                                 SwipeableMessageBubble(
-                                    message           = message,
+                                    message = message,
                                     isFromCurrentUser = isOwn,
-                                    senderName        = viewModel.getSenderName(message.senderId),
-                                    clientId          = groupId,
-                                    clientName        = groupName,
-                                    onReply           = { replyTo = it },
-                                    onCreateTask      = { req: TaskRequest -> taskViewModel.createTask(req) },
-                                    onDelete          = if (isOwn) ({ messageToDelete = message }) else null
+                                    senderName = viewModel.getSenderName(message.senderId),
+                                    clientId = groupId,
+                                    clientName = groupName,
+                                    onReply = { replyTo = it },
+                                    onCreateTask = { req: TaskRequest ->
+                                        taskViewModel.createTask(
+                                            req
+                                        )
+                                    },
+                                    onDelete = if (isOwn) ({ messageToDelete = message }) else null
                                 ) {
                                     GroupMessageBubble(
-                                        message           = message,
+                                        message = message,
                                         isFromCurrentUser = isOwn,
-                                        senderName        = viewModel.getSenderName(message.senderId)
+                                        senderName = viewModel.getSenderName(message.senderId)
                                     )
                                 }
                             }
@@ -371,18 +421,35 @@ fun GroupChatScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(modifier = Modifier.width(3.dp).height(36.dp),
-                            color = WtcBlue, shape = RoundedCornerShape(2.dp)) {}
+                        Surface(
+                            modifier = Modifier
+                                .width(3.dp)
+                                .height(36.dp),
+                            color = WtcBlue,
+                            shape = RoundedCornerShape(2.dp)
+                        ) {}
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Respondendo", fontSize = 11.sp,
-                                color = WtcBlue, fontWeight = FontWeight.SemiBold)
-                            Text(reply.displayContent, fontSize = 12.sp,
-                                color = TextMuted, maxLines = 1)
+                            Text(
+                                "Respondendo",
+                                fontSize = 11.sp,
+                                color = WtcBlue,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                reply.displayContent,
+                                fontSize = 12.sp,
+                                color = TextMuted,
+                                maxLines = 1
+                            )
                         }
                         IconButton(onClick = { replyTo = null }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = null,
-                                modifier = Modifier.size(16.dp), tint = TextMuted)
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = TextMuted
+                            )
                         }
                     }
                 }
@@ -391,17 +458,13 @@ fun GroupChatScreen(
             // ── Preview arquivo pendente ──────────────────────────────────────
             pendingFileUri?.let { uri ->
                 ImagePreviewBar(
-                    imageUrl = uri,
-                    isPdf    = pendingIsPdf,
-                    fileName = pendingFileName,
-                    onCancel = {
-                        pendingFileUri  = null
-                        pendingFileKey  = null
+                    imageUrl = uri, isPdf = pendingIsPdf, fileName = pendingFileName, onCancel = {
+                        pendingFileUri = null
+                        pendingFileKey = null
                         pendingFileName = null
-                        pendingIsPdf    = false
+                        pendingIsPdf = false
                         uploadViewModel.reset()
-                    }
-                )
+                    })
             }
 
             // ── Input de mensagem ─────────────────────────────────────────────
@@ -409,40 +472,41 @@ fun GroupChatScreen(
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 12.dp, vertical = 10.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(13.dp))
-                            .background(WtcBluePale),
-                        contentAlignment = Alignment.Center
+                            .background(WtcBluePale), contentAlignment = Alignment.Center
                     ) {
                         ImagePickerButton(
-                            uploadViewModel = uploadViewModel,
-                            onImageReady    = { url, key ->
-                                pendingFileUri  = url
-                                pendingFileKey  = key
-                                pendingIsPdf    = key.endsWith(".pdf", ignoreCase = true)
+                            uploadViewModel = uploadViewModel, onImageReady = { url, key ->
+                                pendingFileUri = url
+                                pendingFileKey = key
+                                pendingIsPdf = key.endsWith(".pdf", ignoreCase = true)
                                 pendingFileName = uploadState.fileName
-                            }
-                        )
+                            })
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     OutlinedTextField(
-                        value         = messageText,
+                        value = messageText,
                         onValueChange = { messageText = it },
-                        modifier      = Modifier.weight(1f).heightIn(min = 44.dp),
-                        placeholder   = {
-                            Text("Mensagem para o grupo...",
-                                color = TextMuted.copy(alpha = 0.6f), fontSize = 13.sp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 44.dp),
+                        placeholder = {
+                            Text(
+                                "Mensagem para o grupo...",
+                                color = TextMuted.copy(alpha = 0.6f),
+                                fontSize = 13.sp
+                            )
                         },
-                        shape  = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor      = WtcBlue,
-                            unfocusedBorderColor    = WtcBlueHint,
-                            focusedContainerColor   = Color(0xFFF0F6FA),
+                            focusedBorderColor = WtcBlue,
+                            unfocusedBorderColor = WtcBlueHint,
+                            focusedContainerColor = Color(0xFFF0F6FA),
                             unfocusedContainerColor = Color(0xFFF0F6FA)
                         )
                     )
@@ -462,22 +526,24 @@ fun GroupChatScreen(
                             }
                             if (finalText.isNotBlank()) {
                                 viewModel.sendMessage(finalText)
-                                messageText     = ""
-                                pendingFileUri  = null
-                                pendingFileKey  = null
+                                messageText = ""
+                                pendingFileUri = null
+                                pendingFileKey = null
                                 pendingFileName = null
-                                pendingIsPdf    = false
+                                pendingIsPdf = false
                                 uploadViewModel.reset()
                             }
                         },
                         enabled = messageText.isNotBlank() || pendingFileKey != null,
-                        shape   = RoundedCornerShape(50),
-                        colors  = IconButtonDefaults.filledIconButtonColors(containerColor = WtcBlue)
+                        shape = RoundedCornerShape(50),
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = WtcBlue)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send,
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Enviar",
                             tint = Color.White,
-                            modifier = Modifier.size(18.dp))
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -486,37 +552,44 @@ fun GroupChatScreen(
 
     // ── Dialog excluir mensagem ───────────────────────────────────────────────
     messageToDelete?.let { msg ->
-        AlertDialog(
-            onDismissRequest = { messageToDelete = null },
-            title = { Text("Excluir mensagem?", fontWeight = FontWeight.Bold, color = TextPrimary) },
-            text = {
-                Column {
-                    Text("Esta ação não pode ser desfeita.", color = TextMuted, fontSize = 13.sp)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(color = WtcBluePale, shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()) {
-                        Text(msg.displayContent,
-                            style    = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(10.dp),
-                            maxLines = 3, color = TextPrimary)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteMessage(msg.id)
-                    messageToDelete = null
-                }) {
-                    Text("Excluir", color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { messageToDelete = null }) {
-                    Text("Cancelar", color = TextMuted)
+        AlertDialog(onDismissRequest = { messageToDelete = null }, title = {
+            Text(
+                "Excluir mensagem?", fontWeight = FontWeight.Bold, color = TextPrimary
+            )
+        }, text = {
+            Column {
+                Text("Esta ação não pode ser desfeita.", color = TextMuted, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    color = WtcBluePale,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        msg.displayContent,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(10.dp),
+                        maxLines = 3,
+                        color = TextPrimary
+                    )
                 }
             }
-        )
+        }, confirmButton = {
+            TextButton(onClick = {
+                viewModel.deleteMessage(msg.id)
+                messageToDelete = null
+            }) {
+                Text(
+                    "Excluir",
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }, dismissButton = {
+            TextButton(onClick = { messageToDelete = null }) {
+                Text("Cancelar", color = TextMuted)
+            }
+        })
     }
 }
 
@@ -524,46 +597,57 @@ fun GroupChatScreen(
 
 @Composable
 fun GroupMessageBubble(
-    message: Message,
-    isFromCurrentUser: Boolean,
-    senderName: String
+    message: Message, isFromCurrentUser: Boolean, senderName: String
 ) {
-    val alignment   = if (isFromCurrentUser) Alignment.End else Alignment.Start
+    val alignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
     val bubbleColor = if (isFromCurrentUser) WtcBlue else Color.White
-    val textColor   = if (isFromCurrentUser) Color.White else TextPrimary
+    val textColor = if (isFromCurrentUser) Color.White else TextPrimary
 
     Column(
-        modifier            = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalAlignment = alignment
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp), horizontalAlignment = alignment
     ) {
         if (!isFromCurrentUser) {
-            Text(senderName, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                color = WtcBlue, modifier = Modifier.padding(start = 12.dp, bottom = 2.dp))
+            Text(
+                senderName,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = WtcBlue,
+                modifier = Modifier.padding(start = 12.dp, bottom = 2.dp)
+            )
         }
         Surface(
-            color  = bubbleColor,
-            shape  = RoundedCornerShape(
-                topStart    = 18.dp, topEnd      = 18.dp,
-                bottomEnd   = if (isFromCurrentUser) 4.dp else 18.dp,
+            color = bubbleColor,
+            shape = RoundedCornerShape(
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomEnd = if (isFromCurrentUser) 4.dp else 18.dp,
                 bottomStart = if (isFromCurrentUser) 18.dp else 4.dp
             ),
             shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
-            modifier        = Modifier.widthIn(max = 280.dp)
+            modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
-                Text(message.displayContent, fontSize = 14.sp,
-                    color = textColor, lineHeight = 20.sp)
+                Text(
+                    message.displayContent, fontSize = 14.sp, color = textColor, lineHeight = 20.sp
+                )
                 if (message.edited) {
-                    Text("editada", fontSize = 10.sp,
+                    Text(
+                        "editada",
+                        fontSize = 10.sp,
                         color = textColor.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(top = 2.dp))
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
                 Text(
                     formatGroupTime(message.createdAt),
-                    fontSize  = 10.sp,
-                    color     = textColor.copy(alpha = 0.55f),
+                    fontSize = 10.sp,
+                    color = textColor.copy(alpha = 0.55f),
                     textAlign = TextAlign.End,
-                    modifier  = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
                 )
             }
         }
@@ -572,5 +656,9 @@ fun GroupMessageBubble(
 
 private fun formatGroupTime(createdAt: String?): String {
     if (createdAt.isNullOrBlank()) return ""
-    return try { createdAt.drop(11).take(5) } catch (_: Exception) { "" }
+    return try {
+        createdAt.drop(11).take(5)
+    } catch (_: Exception) {
+        ""
+    }
 }

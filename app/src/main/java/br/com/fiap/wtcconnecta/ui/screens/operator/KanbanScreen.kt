@@ -30,27 +30,26 @@ import br.com.fiap.wtcconnecta.data.model.TaskStatus
 import br.com.fiap.wtcconnecta.ui.components.TaskFormDialog
 import br.com.fiap.wtcconnecta.viewmodel.TaskViewModel
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
-private val ColPending  = Color(0xFFE65100)
+private val ColPending = Color(0xFFE65100)
 private val ColProgress = Color(0xFF0B537B)
-private val ColDone     = Color(0xFF1A7A5E)
+private val ColDone = Color(0xFF1A7A5E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KanbanScreen(
-    onBack: () -> Unit,
-    viewModel: TaskViewModel = viewModel()
+    onBack: () -> Unit, viewModel: TaskViewModel = viewModel()
 ) {
-    val uiState           by viewModel.uiState.collectAsState()
-    var showCreateDialog  by remember { mutableStateOf(false) }
-    var taskToDelete      by remember { mutableStateOf<Task?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<Task?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { viewModel.loadTasks() }
@@ -59,10 +58,13 @@ fun KanbanScreen(
     }
 
     Scaffold(
-        snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF0F6FA)
+        snackbarHost = { SnackbarHost(snackbarHostState) }, containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             // ── Header Hero ───────────────────────────────────────────────────
             Box(
@@ -98,22 +100,33 @@ fun KanbanScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
-                            onClick  = onBack,
-                            modifier = Modifier
+                            onClick = onBack, modifier = Modifier
                                 .size(36.dp)
-                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                .background(
+                                    Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp)
+                                )
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
-                                tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Voltar",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                         IconButton(
-                            onClick  = { showCreateDialog = true },
+                            onClick = { showCreateDialog = true },
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                .background(
+                                    Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp)
+                                )
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Nova tarefa",
-                                tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Nova tarefa",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
@@ -121,16 +134,16 @@ fun KanbanScreen(
 
                     Text(
                         "Painel de Tarefas",
-                        fontSize   = 24.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color      = Color.White,
+                        color = Color.White,
                         lineHeight = 28.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "Gerencie suas tarefas em andamento",
-                        fontSize     = 13.sp,
-                        color        = Color.White.copy(alpha = 0.65f),
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.65f),
                         letterSpacing = 0.2.sp
                     )
 
@@ -149,23 +162,32 @@ fun KanbanScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 else -> Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .horizontalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    KanbanColumn(title = "Pendente", status = "PENDING",
-                        tasks = viewModel.pendingTasks, accentColor = ColPending,
+                    KanbanColumn(
+                        title = "Pendente",
+                        status = "PENDING",
+                        tasks = viewModel.pendingTasks,
+                        accentColor = ColPending,
                         onMove = { task, s -> viewModel.updateStatus(task.id, s) },
                         onDelete = { taskToDelete = it })
-                    KanbanColumn(title = "Em andamento", status = "IN_PROGRESS",
-                        tasks = viewModel.inProgressTasks, accentColor = ColProgress,
+                    KanbanColumn(
+                        title = "Em andamento",
+                        status = "IN_PROGRESS",
+                        tasks = viewModel.inProgressTasks,
+                        accentColor = ColProgress,
                         onMove = { task, s -> viewModel.updateStatus(task.id, s) },
                         onDelete = { taskToDelete = it })
-                    KanbanColumn(title = "Concluída", status = "DONE",
-                        tasks = viewModel.doneTasks, accentColor = ColDone,
+                    KanbanColumn(
+                        title = "Concluída",
+                        status = "DONE",
+                        tasks = viewModel.doneTasks,
+                        accentColor = ColDone,
                         onMove = { task, s -> viewModel.updateStatus(task.id, s) },
                         onDelete = { taskToDelete = it })
                 }
@@ -176,25 +198,30 @@ fun KanbanScreen(
     if (showCreateDialog) {
         TaskFormDialog(
             onDismiss = { showCreateDialog = false },
-            onConfirm = { viewModel.createTask(it); showCreateDialog = false }
-        )
+            onConfirm = { viewModel.createTask(it); showCreateDialog = false })
     }
 
     taskToDelete?.let { task ->
         AlertDialog(
             onDismissRequest = { taskToDelete = null },
             title = { Text("Remover tarefa?", fontWeight = FontWeight.Bold, color = TextPrimary) },
-            text  = { Text("\"${task.title}\" será removida permanentemente.", color = TextMuted) },
+            text = { Text("\"${task.title}\" será removida permanentemente.", color = TextMuted) },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteTask(task.id); taskToDelete = null }) {
-                    Text("Remover", color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Remover",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { taskToDelete = null }) { Text("Cancelar", color = TextMuted) }
-            }
-        )
+                TextButton(onClick = { taskToDelete = null }) {
+                    Text(
+                        "Cancelar", color = TextMuted
+                    )
+                }
+            })
     }
 }
 
@@ -203,8 +230,7 @@ fun KanbanScreen(
 @Composable
 private fun KanbanPill(label: String, count: Int, accent: Color) {
     Surface(
-        color = Color.White.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(20.dp)
+        color = Color.White.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -219,8 +245,8 @@ private fun KanbanPill(label: String, count: Int, accent: Color) {
             )
             Text(
                 "$count $label",
-                fontSize   = 11.sp,
-                color      = Color.White.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.85f),
                 fontWeight = FontWeight.Medium
             )
         }
@@ -231,7 +257,9 @@ private fun KanbanPill(label: String, count: Int, accent: Color) {
 
 @Composable
 fun KanbanColumn(
-    title: String, status: String, tasks: List<Task>,
+    title: String,
+    status: String,
+    tasks: List<Task>,
     accentColor: Color,
     onMove: (Task, String) -> Unit,
     onDelete: (Task) -> Unit
@@ -246,7 +274,9 @@ fun KanbanColumn(
     ) {
         // Header da coluna
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -258,16 +288,20 @@ fun KanbanColumn(
                         .background(accentColor)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(title, fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(
+                    title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary
+                )
             }
             Surface(
-                color = accentColor.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(20.dp)
+                color = accentColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)
             ) {
-                Text("${tasks.size}", fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold, color = accentColor,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
+                Text(
+                    "${tasks.size}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                )
             }
         }
 
@@ -281,8 +315,10 @@ fun KanbanColumn(
                     .padding(vertical = 28.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
@@ -290,20 +326,24 @@ fun KanbanColumn(
                             .background(accentColor.copy(alpha = 0.08f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.CheckCircleOutline,
+                        Icon(
+                            Icons.Default.CheckCircleOutline,
                             contentDescription = null,
-                            tint     = accentColor.copy(alpha = 0.4f),
-                            modifier = Modifier.size(20.dp))
+                            tint = accentColor.copy(alpha = 0.4f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
-                    Text("Nenhuma tarefa", fontSize = 12.sp,
-                        color = TextMuted.copy(alpha = 0.6f))
+                    Text(
+                        "Nenhuma tarefa", fontSize = 12.sp, color = TextMuted.copy(alpha = 0.6f)
+                    )
                 }
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(tasks) { task ->
-                    TaskCard(task = task, accentColor = accentColor,
-                        onMove = onMove, onDelete = onDelete)
+                    TaskCard(
+                        task = task, accentColor = accentColor, onMove = onMove, onDelete = onDelete
+                    )
                 }
             }
         }
@@ -314,25 +354,23 @@ fun KanbanColumn(
 
 @Composable
 fun TaskCard(
-    task: Task, accentColor: Color,
-    onMove: (Task, String) -> Unit,
-    onDelete: (Task) -> Unit
+    task: Task, accentColor: Color, onMove: (Task, String) -> Unit, onDelete: (Task) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     val priorityColor = when (task.priority) {
-        "HIGH"   -> Color(0xFFC62828)
+        "HIGH" -> Color(0xFFC62828)
         "MEDIUM" -> Color(0xFFE65100)
-        else     -> Color(0xFF1A7A5E)
+        else -> Color(0xFF1A7A5E)
     }
 
     val categoryEmoji = TaskCategory.entries.firstOrNull { it.name == task.category }?.emoji ?: "📌"
     val priorityEmoji = TaskPriority.entries.firstOrNull { it.name == task.priority }?.emoji ?: "🟡"
 
     Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(14.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color(0xFFF5FAFD)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FAFD)),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -352,15 +390,25 @@ fun TaskCard(
                             .background(accentColor)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(task.title, fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold, color = TextPrimary,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        task.title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Box {
-                    IconButton(onClick = { showMenu = true },
-                        modifier = Modifier.size(20.dp)) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null,
-                            modifier = Modifier.size(15.dp), tint = TextMuted)
+                    IconButton(
+                        onClick = { showMenu = true }, modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = TextMuted
+                        )
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         TaskStatus.entries.filter { it.name != task.status }.forEach { s ->
@@ -369,12 +417,11 @@ fun TaskCard(
                                 onClick = { onMove(task, s.name); showMenu = false })
                         }
                         HorizontalDivider()
-                        DropdownMenuItem(
-                            text = {
-                                Text("Remover", color = MaterialTheme.colorScheme.error,
-                                    fontSize = 13.sp)
-                            },
-                            onClick = { onDelete(task); showMenu = false })
+                        DropdownMenuItem(text = {
+                            Text(
+                                "Remover", color = MaterialTheme.colorScheme.error, fontSize = 13.sp
+                            )
+                        }, onClick = { onDelete(task); showMenu = false })
                     }
                 }
             }
@@ -387,27 +434,38 @@ fun TaskCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 4.dp)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = null,
-                        tint = WtcBlue, modifier = Modifier.size(12.dp))
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = WtcBlue,
+                        modifier = Modifier.size(12.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(task.clientName, fontSize = 11.sp,
-                        color = WtcBlue, fontWeight = FontWeight.Medium)
+                    Text(
+                        task.clientName,
+                        fontSize = 11.sp,
+                        color = WtcBlue,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
             // Mensagem de origem
             if (task.messageRef.isNotBlank()) {
                 Surface(
-                    color    = WtcBluePale,
-                    shape    = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                    color = WtcBluePale,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp)
                 ) {
                     Text(
-                        "\"${task.messageRef.take(60)}${if (task.messageRef.length > 60) "..." else ""}\""
-                        ,
-                        fontSize = 10.sp, color = TextMuted,
+                        "\"${task.messageRef.take(60)}${if (task.messageRef.length > 60) "..." else ""}\"",
+                        fontSize = 10.sp,
+                        color = TextMuted,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                        maxLines = 2, overflow = TextOverflow.Ellipsis
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -417,17 +475,20 @@ fun TaskCard(
                 Surface(color = WtcBluePale, shape = RoundedCornerShape(6.dp)) {
                     Text(
                         "$categoryEmoji ${TaskCategory.entries.firstOrNull { it.name == task.category }?.label ?: task.category}",
-                        fontSize = 10.sp, color = WtcBlue,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                        fontSize = 10.sp,
+                        color = WtcBlue,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
                 }
                 Surface(
-                    color = priorityColor.copy(alpha = 0.10f),
-                    shape = RoundedCornerShape(6.dp)
+                    color = priorityColor.copy(alpha = 0.10f), shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
                         "$priorityEmoji ${TaskPriority.entries.firstOrNull { it.name == task.priority }?.label ?: task.priority}",
-                        fontSize = 10.sp, color = priorityColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                        fontSize = 10.sp,
+                        color = priorityColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
                 }
             }
 
@@ -437,8 +498,12 @@ fun TaskCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 6.dp)
                 ) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null,
-                        tint = TextMuted, modifier = Modifier.size(11.dp))
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = TextMuted,
+                        modifier = Modifier.size(11.dp)
+                    )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(task.dueDate, fontSize = 10.sp, color = TextMuted)
                 }

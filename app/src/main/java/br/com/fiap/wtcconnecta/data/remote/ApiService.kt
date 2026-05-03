@@ -16,7 +16,10 @@ import retrofit2.Response
 import retrofit2.http.*
 
 data class LoginRequest(val email: String, val password: String)
-data class LoginResponse(val token: String, val id: String, val role: String, val email: String, val name: String)
+data class LoginResponse(
+    val token: String, val id: String, val role: String, val email: String, val name: String
+)
+
 data class RegisterRequest(
     val name: String,
     val email: String,
@@ -26,19 +29,23 @@ data class RegisterRequest(
     val phone: String? = null,
     val company: String? = null
 )
+
 data class RegisterResponse(val token: String, val userId: String)
 data class NoteRequest(val text: String, val clientId: String)
-data class MessageRequest(val recipientId: String, val title: String? = null, val body: String, val groupId: String? = null)
+data class MessageRequest(
+    val recipientId: String,
+    val title: String? = null,
+    val body: String,
+    val groupId: String? = null
+)
+
 data class UnreadCountResponse(val count: Int)
 data class GroupMessageRequest(val groupId: String, val title: String? = null, val body: String)
 data class UserPublicDto(val id: String, val name: String, val email: String, val role: String)
 
 // ── Upload de Imagem ──────────────────────────────────────────────────────────
 data class UploadResponse(
-    val objectKey: String,
-    val url: String,
-    val contentType: String,
-    val size: Long
+    val objectKey: String, val url: String, val contentType: String, val size: Long
 )
 
 data class PresignedUrlResponse(
@@ -77,8 +84,7 @@ data class ConversationStatusResponse(
 
 // ── Avaliação de Atendimento ──────────────────────────────────────────────────
 data class RatingRequest(
-    val stars: Int,
-    val comment: String? = null
+    val stars: Int, val comment: String? = null
 )
 
 interface ApiService {
@@ -118,7 +124,9 @@ interface ApiService {
     suspend fun createNote(@Path("id") clientId: String, @Body note: NoteRequest): Response<Note>
 
     @PUT("api/notes/{id}")
-    suspend fun updateNote(@Path("id") noteId: String, @Body body: Map<String, String>): Response<Note>
+    suspend fun updateNote(
+        @Path("id") noteId: String, @Body body: Map<String, String>
+    ): Response<Note>
 
     @DELETE("api/notes/{id}")
     suspend fun deleteNote(@Path("id") noteId: String): Response<Void>
@@ -241,8 +249,7 @@ interface ApiService {
 
     @PATCH("api/tasks/{taskId}/status")
     suspend fun updateTaskStatus(
-        @Path("taskId") taskId: String,
-        @Body body: Map<String, String>
+        @Path("taskId") taskId: String, @Body body: Map<String, String>
     ): Task
 
     @DELETE("api/tasks/{taskId}")
@@ -250,7 +257,9 @@ interface ApiService {
 
     // ── Mensagens — editar/excluir ────────────────────────────────────────────
     @PUT("api/messages/{id}")
-    suspend fun editMessage(@Path("id") id: String, @Body body: Map<String, String>): Response<Message>
+    suspend fun editMessage(
+        @Path("id") id: String, @Body body: Map<String, String>
+    ): Response<Message>
 
     @DELETE("api/messages/{id}")
     suspend fun deleteMessage(@Path("id") id: String): Response<Unit>
@@ -328,8 +337,7 @@ interface ApiService {
 
     @POST("api/ratings/{sessionId}")
     suspend fun submitRating(
-        @Path("sessionId") sessionId: String,
-        @Body body: RatingRequest
+        @Path("sessionId") sessionId: String, @Body body: RatingRequest
     ): Response<Map<String, String>>
 
     @GET("api/ratings/my-stats")

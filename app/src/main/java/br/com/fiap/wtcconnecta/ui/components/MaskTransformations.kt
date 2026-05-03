@@ -32,6 +32,7 @@ class CpfVisualTransformation : VisualTransformation {
                 }
                 return transformed
             }
+
             override fun transformedToOriginal(offset: Int): Int {
                 var original = 0
                 for (i in 0 until offset.coerceAtMost(masked.length)) {
@@ -51,9 +52,9 @@ fun applyPhoneMask(phone: String): String {
     return buildString {
         digits.forEachIndexed { i, c ->
             when (i) {
-                0    -> append("($c")
-                1    -> append("$c) ")
-                6    -> append("$c-")
+                0 -> append("($c")
+                1 -> append("$c) ")
+                6 -> append("$c-")
                 else -> append(c)
             }
         }
@@ -74,6 +75,7 @@ class PhoneVisualTransformation : VisualTransformation {
                 }
                 return transformed
             }
+
             override fun transformedToOriginal(offset: Int): Int {
                 var original = 0
                 for (i in 0 until offset.coerceAtMost(masked.length)) {

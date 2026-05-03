@@ -24,9 +24,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
 import coil.compose.AsyncImage
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBluePale = Color(0xFFEEF6FB)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 /**
  * Botão de anexar arquivo (imagem ou PDF) para a barra de input do ChatScreen.
@@ -36,8 +36,8 @@ fun ImagePickerButton(
     onImageReady: (url: String, key: String) -> Unit,
     uploadViewModel: ImageUploadViewModel = viewModel()
 ) {
-    val context   = LocalContext.current
-    val uiState   by uploadViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val uiState by uploadViewModel.uiState.collectAsState()
 
     // Aceita imagens e PDFs
     val launcher = rememberLauncherForActivityResult(
@@ -51,21 +51,18 @@ fun ImagePickerButton(
     }
 
     IconButton(
-        onClick  = { launcher.launch("*/*") },
-        enabled  = !uiState.isUploading
+        onClick = { launcher.launch("*/*") }, enabled = !uiState.isUploading
     ) {
         if (uiState.isUploading) {
             CircularProgressIndicator(
-                modifier    = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color       = WtcBlue
+                modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = WtcBlue
             )
         } else {
             Icon(
-                imageVector        = Icons.Default.AttachFile,
+                imageVector = Icons.Default.AttachFile,
                 contentDescription = "Anexar arquivo",
-                tint               = WtcBlue,
-                modifier           = Modifier.size(24.dp)
+                tint = WtcBlue,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -74,13 +71,12 @@ fun ImagePickerButton(
         AlertDialog(
             onDismissRequest = { uploadViewModel.clearError() },
             title = { Text("Erro no upload", fontWeight = FontWeight.Bold) },
-            text  = { Text(errorMsg, color = TextMuted) },
+            text = { Text(errorMsg, color = TextMuted) },
             confirmButton = {
                 TextButton(onClick = { uploadViewModel.clearError() }) {
                     Text("OK", color = WtcBlue)
                 }
-            }
-        )
+            })
     }
 }
 
@@ -89,12 +85,10 @@ fun ImagePickerButton(
  */
 @Composable
 fun ImageMessageBubble(
-    imageUrl: String,
-    caption: String? = null,
-    isFromCurrentUser: Boolean
+    imageUrl: String, caption: String? = null, isFromCurrentUser: Boolean
 ) {
     val bubbleColor = if (isFromCurrentUser) Color(0xFF0B537B) else Color.White
-    val alignment   = if (isFromCurrentUser) Alignment.End else Alignment.Start
+    val alignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
 
     Column(
         modifier = Modifier
@@ -115,24 +109,24 @@ fun ImageMessageBubble(
         ) {
             Column {
                 AsyncImage(
-                    model              = imageUrl,
+                    model = imageUrl,
                     contentDescription = "Imagem enviada",
-                    contentScale       = ContentScale.Crop,
-                    modifier           = Modifier
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 120.dp, max = 260.dp)
                         .clip(
-                            if (caption != null)
-                                RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                            else
-                                RoundedCornerShape(16.dp)
+                            if (caption != null) RoundedCornerShape(
+                                topStart = 16.dp, topEnd = 16.dp
+                            )
+                            else RoundedCornerShape(16.dp)
                         )
                 )
                 if (!caption.isNullOrBlank()) {
                     Text(
-                        text     = caption,
+                        text = caption,
                         fontSize = 13.sp,
-                        color    = if (isFromCurrentUser) Color.White.copy(alpha = 0.9f)
+                        color = if (isFromCurrentUser) Color.White.copy(alpha = 0.9f)
                         else Color(0xFF0D2B3E),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
@@ -147,13 +141,11 @@ fun ImageMessageBubble(
  */
 @Composable
 fun PdfMessageBubble(
-    fileName: String,
-    onOpen: () -> Unit,
-    isFromCurrentUser: Boolean
+    fileName: String, onOpen: () -> Unit, isFromCurrentUser: Boolean
 ) {
     val bubbleColor = if (isFromCurrentUser) Color(0xFF0B537B) else Color.White
-    val textColor   = if (isFromCurrentUser) Color.White else Color(0xFF0D2B3E)
-    val alignment   = if (isFromCurrentUser) Alignment.End else Alignment.Start
+    val textColor = if (isFromCurrentUser) Color.White else Color(0xFF0D2B3E)
+    val alignment = if (isFromCurrentUser) Alignment.End else Alignment.Start
 
     Column(
         modifier = Modifier
@@ -162,11 +154,11 @@ fun PdfMessageBubble(
         horizontalAlignment = alignment
     ) {
         Surface(
-            onClick   = onOpen,
-            shape     = RoundedCornerShape(16.dp),
-            color     = bubbleColor,
+            onClick = onOpen,
+            shape = RoundedCornerShape(16.dp),
+            color = bubbleColor,
             shadowElevation = if (isFromCurrentUser) 0.dp else 1.dp,
-            modifier  = Modifier.widthIn(max = 260.dp)
+            modifier = Modifier.widthIn(max = 260.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -180,19 +172,26 @@ fun PdfMessageBubble(
                         .background(
                             if (isFromCurrentUser) Color.White.copy(alpha = 0.15f)
                             else Color(0xFFFFEBEE)
-                        ),
-                    contentAlignment = Alignment.Center
+                        ), contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null,
-                        tint     = if (isFromCurrentUser) Color.White else Color(0xFFC62828),
-                        modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = if (isFromCurrentUser) Color.White else Color(0xFFC62828),
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(fileName, fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold, color = textColor,
-                        maxLines = 2)
-                    Text("Toque para abrir", fontSize = 11.sp,
-                        color = textColor.copy(alpha = 0.65f))
+                    Text(
+                        fileName,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = textColor,
+                        maxLines = 2
+                    )
+                    Text(
+                        "Toque para abrir", fontSize = 11.sp, color = textColor.copy(alpha = 0.65f)
+                    )
                 }
             }
         }
@@ -204,10 +203,7 @@ fun PdfMessageBubble(
  */
 @Composable
 fun ImagePreviewBar(
-    imageUrl: String,
-    fileName: String? = null,
-    isPdf: Boolean = false,
-    onCancel: () -> Unit
+    imageUrl: String, fileName: String? = null, isPdf: Boolean = false, onCancel: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -221,18 +217,21 @@ fun ImagePreviewBar(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFFFEBEE)),
-                contentAlignment = Alignment.Center
+                    .background(Color(0xFFFFEBEE)), contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.PictureAsPdf, contentDescription = null,
-                    tint = Color(0xFFC62828), modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Default.PictureAsPdf,
+                    contentDescription = null,
+                    tint = Color(0xFFC62828),
+                    modifier = Modifier.size(28.dp)
+                )
             }
         } else {
             AsyncImage(
-                model              = imageUrl,
+                model = imageUrl,
                 contentDescription = "Preview",
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
@@ -241,14 +240,20 @@ fun ImagePreviewBar(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 if (isPdf) (fileName ?: "Arquivo PDF") else "Imagem selecionada",
-                fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF0D2B3E),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF0D2B3E),
                 maxLines = 1
             )
             Text("Toque em enviar para confirmar", fontSize = 11.sp, color = TextMuted)
         }
         IconButton(onClick = onCancel, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "Cancelar",
-                tint = TextMuted, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Cancelar",
+                tint = TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

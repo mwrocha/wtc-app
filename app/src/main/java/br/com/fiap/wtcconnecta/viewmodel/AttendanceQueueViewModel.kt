@@ -43,25 +43,25 @@ class AttendanceQueueViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val pending  = RetrofitClient.instance.getPendingConversations()
-                val active   = RetrofitClient.instance.getMyActiveConversations()
-                val closed   = RetrofitClient.instance.getMyClosedSessions()
+                val pending = RetrofitClient.instance.getPendingConversations()
+                val active = RetrofitClient.instance.getMyActiveConversations()
+                val closed = RetrofitClient.instance.getMyClosedSessions()
                 val countResp = RetrofitClient.instance.getPendingCount()
 
                 _uiState.update {
                     it.copy(
-                        isLoading            = false,
+                        isLoading = false,
                         pendingConversations = pending,
-                        activeConversations  = active,
-                        closedSessions       = closed.map { map ->
+                        activeConversations = active,
+                        closedSessions = closed.map { map ->
                             ClosedSession(
-                                sessionId      = map["sessionId"]      ?: "",
+                                sessionId = map["sessionId"] ?: "",
                                 conversationId = map["conversationId"] ?: "",
-                                clientEmail    = map["clientEmail"]    ?: "",
-                                clientName     = map["clientName"]     ?: "",
-                                clientId       = map["clientId"]       ?: "",
-                                assumedAt      = map["assumedAt"]      ?: "",
-                                closedAt       = map["closedAt"]       ?: ""
+                                clientEmail = map["clientEmail"] ?: "",
+                                clientName = map["clientName"] ?: "",
+                                clientId = map["clientId"] ?: "",
+                                assumedAt = map["assumedAt"] ?: "",
+                                closedAt = map["closedAt"] ?: ""
                             )
                         },
                         pendingCount = countResp.count
@@ -79,11 +79,12 @@ class AttendanceQueueViewModel : ViewModel() {
                 delay(15_000)
                 try {
                     val countResp = RetrofitClient.instance.getPendingCount()
-                    val active    = RetrofitClient.instance.getMyActiveConversations()
+                    val active = RetrofitClient.instance.getMyActiveConversations()
                     _uiState.update {
                         it.copy(pendingCount = countResp.count, activeConversations = active)
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
         }
     }
@@ -92,27 +93,25 @@ class AttendanceQueueViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isAssuming = true, error = null) }
             try {
-                val conv = _uiState.value.pendingConversations
-                    .find { it.conversationId == conversationId }
-                val clientId   = conv?.clientId   ?: ""
+                val conv =
+                    _uiState.value.pendingConversations.find { it.conversationId == conversationId }
+                val clientId = conv?.clientId ?: ""
                 val clientName = conv?.clientName ?: "Cliente"
 
                 val response = RetrofitClient.instance.assumeConversation(conversationId)
                 if (response.isSuccessful) {
                     _uiState.update { state ->
                         state.copy(
-                            isAssuming           = false,
-                            assumeSuccess        = conversationId,
-                            assumedClientId      = clientId,
-                            assumedClientName    = clientName,
-                            pendingConversations = state.pendingConversations
-                                .filter { it.conversationId != conversationId },
-                            pendingCount         = (state.pendingCount - 1).coerceAtLeast(0)
+                            isAssuming = false,
+                            assumeSuccess = conversationId,
+                            assumedClientId = clientId,
+                            assumedClientName = clientName,
+                            pendingConversations = state.pendingConversations.filter { it.conversationId != conversationId },
+                            pendingCount = (state.pendingCount - 1).coerceAtLeast(0)
                         )
                     }
                 } else {
-                    val msg = if (response.code() == 400)
-                        "Esta conversa já está sendo atendida."
+                    val msg = if (response.code() == 400) "Esta conversa já está sendo atendida."
                     else "Erro ao assumir atendimento."
                     _uiState.update { it.copy(isAssuming = false, error = msg) }
                 }
@@ -125,5 +124,6 @@ class AttendanceQueueViewModel : ViewModel() {
     fun clearAssumeSuccess() = _uiState.update {
         it.copy(assumeSuccess = null, assumedClientId = null, assumedClientName = null)
     }
+
     fun clearError() = _uiState.update { it.copy(error = null) }
 }

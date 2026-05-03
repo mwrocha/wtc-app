@@ -12,12 +12,12 @@ enum class MessageStatus {
 
     companion object {
         fun fromString(value: String?): MessageStatus = when (value?.uppercase()) {
-            "SENDING"   -> SENDING
-            "SENT"      -> SENT
+            "SENDING" -> SENDING
+            "SENT" -> SENT
             "DELIVERED" -> DELIVERED
-            "READ"      -> READ
-            "FAILED"    -> FAILED
-            else        -> SENT // fallback para mensagens antigas sem status
+            "READ" -> READ
+            "FAILED" -> FAILED
+            else -> SENT // fallback para mensagens antigas sem status
         }
     }
 }
@@ -40,19 +40,18 @@ data class Message(
     val edited: Boolean = false,
 
     // ── Status de entrega ─────────────────────────────────────────────────────
-    @SerializedName("status")
-    val statusRaw: String? = null,
+    @SerializedName("status") val statusRaw: String? = null,
 
-    @SerializedName("content")
-    val contentRaw: String? = null
+    @SerializedName("content") val contentRaw: String? = null
 ) {
     val content: String get() = contentRaw ?: ""
     val displayContent: String get() = contentRaw?.ifBlank { null } ?: body ?: text ?: ""
 
     // Resolve o status: usa statusRaw do JSON ou infere pelo campo read
-    val status: MessageStatus get() = when {
-        statusRaw != null -> MessageStatus.fromString(statusRaw)
-        read              -> MessageStatus.READ
-        else              -> MessageStatus.SENT
-    }
+    val status: MessageStatus
+        get() = when {
+            statusRaw != null -> MessageStatus.fromString(statusRaw)
+            read -> MessageStatus.READ
+            else -> MessageStatus.SENT
+        }
 }

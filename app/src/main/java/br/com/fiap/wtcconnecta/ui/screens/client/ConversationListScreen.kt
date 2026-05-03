@@ -26,13 +26,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.fiap.wtcconnecta.viewmodel.ConversationListViewModel
 import kotlinx.coroutines.flow.collectLatest
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +41,7 @@ fun ConversationListScreen(
     onNavigateToChat: (chatId: String, chatName: String, chatType: String) -> Unit,
     viewModel: ConversationListViewModel = viewModel()
 ) {
-    val uiState           by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -52,8 +52,7 @@ fun ConversationListScreen(
     LaunchedEffect(clientId) { viewModel.loadClientData(clientId) }
 
     Scaffold(
-        snackbarHost   = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF0F6FA)
+        snackbarHost = { SnackbarHost(snackbarHostState) }, containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -90,24 +89,23 @@ fun ConversationListScreen(
                 ) {
                     Text(
                         "Minhas Conversas",
-                        fontSize   = 24.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color      = Color.White,
+                        color = Color.White,
                         lineHeight = 30.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         "Selecione uma conversa para continuar",
-                        fontSize     = 13.sp,
-                        color        = Color.White.copy(alpha = 0.65f),
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.65f),
                         letterSpacing = 0.2.sp
                     )
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Pill de status online
                     Surface(
-                        color = Color.White.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(20.dp)
+                        color = Color.White.copy(alpha = 0.15f), shape = RoundedCornerShape(20.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -122,8 +120,8 @@ fun ConversationListScreen(
                             )
                             Text(
                                 "WTC Connecta online",
-                                fontSize   = 11.sp,
-                                color      = Color.White.copy(alpha = 0.85f),
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.85f),
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -136,29 +134,28 @@ fun ConversationListScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
+                    modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(
                         start = 20.dp, end = 20.dp, top = 24.dp, bottom = 32.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ), verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
 
                     // ── Atendimento ───────────────────────────────────────────
                     item {
                         Text(
                             "ATENDIMENTO",
-                            fontSize     = 11.sp,
-                            fontWeight   = FontWeight.Bold,
-                            color        = TextMuted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextMuted,
                             letterSpacing = 1.2.sp,
-                            modifier     = Modifier.padding(bottom = 4.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
 
                     item {
                         val realConversationId = viewModel.getConversationId(clientId)
-                        val operatorEmail      = viewModel.getOperatorEmail()
+                        val operatorEmail = viewModel.getOperatorEmail()
                         val chatId = if (realConversationId.contains("@")) realConversationId
                         else operatorEmail ?: realConversationId
                         val lastMsg = uiState.lastMessages[realConversationId]
@@ -169,11 +166,11 @@ fun ConversationListScreen(
 
                         // Card principal de atendimento — gradiente azul
                         Card(
-                            onClick   = { onNavigateToChat(chatId, "Atendimento WTC", "1on1") },
-                            modifier  = Modifier.fillMaxWidth(),
-                            shape     = RoundedCornerShape(20.dp),
+                            onClick = { onNavigateToChat(chatId, "Atendimento WTC", "1on1") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            colors    = CardDefaults.cardColors(containerColor = Color.Transparent)
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -197,21 +194,36 @@ fun ConversationListScreen(
                                             .background(Color.White.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Default.Person, contentDescription = null,
-                                            tint = Color.White, modifier = Modifier.size(26.dp))
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(26.dp)
+                                        )
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Atendimento WTC", fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold, color = Color.White)
-                                        Text(lastMessageText, fontSize = 12.sp,
+                                        Text(
+                                            "Atendimento WTC",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            lastMessageText,
+                                            fontSize = 12.sp,
                                             color = Color.White.copy(alpha = 0.72f),
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(top = 3.dp))
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(top = 3.dp)
+                                        )
                                     }
-                                    Icon(Icons.Default.ArrowForward, contentDescription = null,
+                                    Icon(
+                                        Icons.Default.ArrowForward,
+                                        contentDescription = null,
                                         tint = Color.White.copy(alpha = 0.7f),
-                                        modifier = Modifier.size(20.dp))
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -222,11 +234,11 @@ fun ConversationListScreen(
                         item {
                             Text(
                                 "GRUPOS",
-                                fontSize     = 11.sp,
-                                fontWeight   = FontWeight.Bold,
-                                color        = TextMuted,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
                                 letterSpacing = 1.2.sp,
-                                modifier     = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                             )
                         }
 
@@ -234,10 +246,9 @@ fun ConversationListScreen(
                             val lastMessageText = uiState.lastMessages[group.id]?.content
                                 ?: "Clique para ver as mensagens do grupo..."
                             GroupConversationCard(
-                                name        = group.name,
+                                name = group.name,
                                 lastMessage = lastMessageText,
-                                onClick     = { onNavigateToChat(group.id, group.name, "group") }
-                            )
+                                onClick = { onNavigateToChat(group.id, group.name, "group") })
                         }
                     }
 
@@ -245,10 +256,12 @@ fun ConversationListScreen(
                     item {
                         Text(
                             "WTC Connecta • Comunicação corporativa",
-                            fontSize  = 11.sp,
-                            color     = TextMuted.copy(alpha = 0.5f),
+                            fontSize = 11.sp,
+                            color = TextMuted.copy(alpha = 0.5f),
                             textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth().padding(top = 12.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp)
                         )
                     }
                 }
@@ -261,15 +274,13 @@ fun ConversationListScreen(
 
 @Composable
 fun GroupConversationCard(
-    name: String,
-    lastMessage: String,
-    onClick: () -> Unit
+    name: String, lastMessage: String, onClick: () -> Unit
 ) {
     Card(
-        onClick   = onClick,
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -282,19 +293,33 @@ fun GroupConversationCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(WtcBlueHint),
-                contentAlignment = Alignment.Center
+                    .background(WtcBlueHint), contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Group, contentDescription = null,
-                    tint = WtcBlueDark, modifier = Modifier.size(22.dp))
+                Icon(
+                    Icons.Default.Group,
+                    contentDescription = null,
+                    tint = WtcBlueDark,
+                    modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(lastMessage, fontSize = 12.sp, color = TextMuted,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 3.dp))
+                Text(
+                    name,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    lastMessage,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
             }
             Box(
                 modifier = Modifier
@@ -303,8 +328,12 @@ fun GroupConversationCard(
                     .background(WtcBlueHint),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null,
-                    tint = WtcBlueDark, modifier = Modifier.size(15.dp))
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = WtcBlueDark,
+                    modifier = Modifier.size(15.dp)
+                )
             }
         }
     }
@@ -322,30 +351,53 @@ fun ConversationCard(
     onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick, modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(bgAccent),
-                contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(bgAccent), contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(lastMessage, fontSize = 12.sp, color = TextMuted,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    lastMessage,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
-            Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(bgAccent),
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null,
-                    tint = accent, modifier = Modifier.size(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(bgAccent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

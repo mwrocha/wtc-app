@@ -23,11 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 /**
  * Componente reutilizável de avatar com:
@@ -80,14 +80,19 @@ fun AvatarPicker(
                 when {
                     isUploading -> CircularProgressIndicator(
                         modifier = Modifier.size((size * 0.38f).dp),
-                        color = WtcBlue, strokeWidth = 3.dp
+                        color = WtcBlue,
+                        strokeWidth = 3.dp
                     )
+
                     !avatarUrl.isNullOrBlank() -> AsyncImage(
                         model = avatarUrl,
                         contentDescription = "Foto de perfil",
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
                     )
+
                     else -> Text(
                         text = displayName.firstOrNull()?.uppercase() ?: "?",
                         fontSize = (size * 0.37f).sp,
@@ -127,22 +132,69 @@ fun AvatarPicker(
 
     // ── Menu de opções ────────────────────────────────────────────────────────
     if (showMenu) {
-        AlertDialog(
-            onDismissRequest = { showMenu = false },
-            title = {
-                Text("Foto de perfil", fontWeight = FontWeight.Bold,
-                    color = TextPrimary, fontSize = 15.sp)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Editar foto
+        AlertDialog(onDismissRequest = { showMenu = false }, title = {
+            Text(
+                "Foto de perfil",
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                fontSize = 15.sp
+            )
+        }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Editar foto
+                Surface(
+                    onClick = {
+                        showMenu = false
+                        launcher.launch("image/*")
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = WtcBlue.copy(alpha = 0.08f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(WtcBlue.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = WtcBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                "Editar foto",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "Escolher uma nova foto da galeria",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+
+                // Excluir foto (só aparece se tiver foto)
+                if (!avatarUrl.isNullOrBlank()) {
                     Surface(
                         onClick = {
                             showMenu = false
-                            launcher.launch("image/*")
+                            onDeleteAvatar()
                         },
                         shape = RoundedCornerShape(12.dp),
-                        color = WtcBlue.copy(alpha = 0.08f),
+                        color = Color(0xFFC62828).copy(alpha = 0.07f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -153,65 +205,38 @@ fun AvatarPicker(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(WtcBlue.copy(alpha = 0.12f)),
+                                    .background(Color(0xFFC62828).copy(alpha = 0.10f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = null,
-                                    tint = WtcBlue, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFFC62828),
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column {
-                                Text("Editar foto", fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium, color = TextPrimary)
-                                Text("Escolher uma nova foto da galeria",
-                                    fontSize = 11.sp, color = TextMuted)
+                                Text(
+                                    "Excluir foto",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFC62828)
+                                )
+                                Text(
+                                    "Volta a exibir a inicial do seu nome",
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
                             }
                         }
                     }
-
-                    // Excluir foto (só aparece se tiver foto)
-                    if (!avatarUrl.isNullOrBlank()) {
-                        Surface(
-                            onClick = {
-                                showMenu = false
-                                onDeleteAvatar()
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFC62828).copy(alpha = 0.07f),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFFC62828).copy(alpha = 0.10f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Delete, contentDescription = null,
-                                        tint = Color(0xFFC62828), modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Column {
-                                    Text("Excluir foto", fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium, color = Color(0xFFC62828))
-                                    Text("Volta a exibir a inicial do seu nome",
-                                        fontSize = 11.sp, color = TextMuted)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showMenu = false }) {
-                    Text("Cancelar", color = TextMuted)
                 }
             }
-        )
+        }, confirmButton = {}, dismissButton = {
+            TextButton(onClick = { showMenu = false }) {
+                Text("Cancelar", color = TextMuted)
+            }
+        })
     }
 }

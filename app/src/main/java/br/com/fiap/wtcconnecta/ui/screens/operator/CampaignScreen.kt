@@ -32,25 +32,24 @@ import br.com.fiap.wtcconnecta.ui.components.ImagePreviewBar
 import br.com.fiap.wtcconnecta.viewmodel.CampaignViewModel
 import br.com.fiap.wtcconnecta.viewmodel.ImageUploadViewModel
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
 private val WtcBlueDark = Color(0xFF063D5C)
-private val TextMuted   = Color(0xFF6E90A0)
-private val ColorSent   = Color(0xFF1A7A5E)
-private val ColorDraft  = Color(0xFFE65100)
+private val TextMuted = Color(0xFF6E90A0)
+private val ColorSent = Color(0xFF1A7A5E)
+private val ColorDraft = Color(0xFFE65100)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampaignScreen(
-    onBack: () -> Unit,
-    viewModel: CampaignViewModel = viewModel()
+    onBack: () -> Unit, viewModel: CampaignViewModel = viewModel()
 ) {
-    val uiState           by viewModel.uiState.collectAsState()
-    var showCreateDialog  by remember { mutableStateOf(false) }
-    var campaignToEdit    by remember { mutableStateOf<Campaign?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var campaignToEdit by remember { mutableStateOf<Campaign?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { viewModel.loadData() }
@@ -60,56 +59,109 @@ fun CampaignScreen(
     }
 
     Scaffold(
-        snackbarHost   = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFFF0F6FA),
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick        = { showCreateDialog = true },
-                icon           = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                text           = { Text("Nova Campanha", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                onClick = { showCreateDialog = true },
+                icon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                text = {
+                    Text(
+                        "Nova Campanha", fontWeight = FontWeight.SemiBold, fontSize = 14.sp
+                    )
+                },
                 containerColor = WtcBlueDark,
-                contentColor   = Color.White,
-                shape          = RoundedCornerShape(16.dp),
-                modifier       = Modifier.padding(bottom = 8.dp)
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        }) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Brush.linearGradient(listOf(WtcBlueDark, WtcBlue, WtcBlueSoft)))
                     .statusBarsPadding()
             ) {
-                Box(modifier = Modifier.size(180.dp).offset(x = 210.dp, y = (-30).dp)
-                    .clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
-                Box(modifier = Modifier.size(110.dp).offset(x = 260.dp, y = 50.dp)
-                    .clip(CircleShape).background(Color.White.copy(alpha = 0.06f)))
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .offset(x = 210.dp, y = (-30).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .offset(x = 260.dp, y = 50.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.06f))
+                )
                 Column(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 24.dp).padding(top = 16.dp, bottom = 28.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp, bottom = 28.dp)
                 ) {
-                    IconButton(onClick = onBack,
-                        modifier = Modifier.size(36.dp)
-                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
-                            tint = Color.White, modifier = Modifier.size(18.dp))
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Campanhas", fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                        color = Color.White, lineHeight = 30.sp)
+                    Text(
+                        "Campanhas",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        lineHeight = 30.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Gerencie e dispare campanhas", fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.65f), letterSpacing = 0.2.sp)
+                    Text(
+                        "Gerencie e dispare campanhas",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Surface(color = Color.White.copy(alpha = 0.15f), shape = RoundedCornerShape(20.dp)) {
-                        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Default.Campaign, contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(13.dp))
-                            Text("Painel do operador", fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Medium)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Campaign,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                "Painel do operador",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
@@ -119,33 +171,61 @@ fun CampaignScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 uiState.campaigns.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(22.dp))
-                            .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Campaign, contentDescription = null,
-                                modifier = Modifier.size(40.dp), tint = WtcBlue)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(WtcBluePale), contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Campaign,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = WtcBlue
+                            )
                         }
-                        Text("Nenhuma campanha ainda", fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text("Crie sua primeira campanha abaixo!", fontSize = 13.sp, color = TextMuted)
+                        Text(
+                            "Nenhuma campanha ainda",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            "Crie sua primeira campanha abaixo!",
+                            fontSize = 13.sp,
+                            color = TextMuted
+                        )
                     }
                 }
+
                 else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 20.dp, bottom = 100.dp)
                 ) {
                     item {
-                        Text("CAMPANHAS — ${uiState.campaigns.size}", fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.2.sp,
-                            modifier = Modifier.padding(bottom = 4.dp))
+                        Text(
+                            "CAMPANHAS — ${uiState.campaigns.size}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextMuted,
+                            letterSpacing = 1.2.sp,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
                     }
                     items(uiState.campaigns.sortedByDescending { it.createdAt }) { campaign ->
-                        CampaignCard(campaign = campaign,
+                        CampaignCard(
+                            campaign = campaign,
                             onDispatch = { viewModel.dispatchExisting(campaign.id) },
-                            onEdit     = { campaignToEdit = campaign })
+                            onEdit = { campaignToEdit = campaign })
                     }
                 }
             }
@@ -154,23 +234,30 @@ fun CampaignScreen(
 
     if (showCreateDialog) {
         CreateCampaignSheet(
-            groups = uiState.groups, divisions = uiState.divisions,
+            groups = uiState.groups,
+            divisions = uiState.divisions,
             availableTags = uiState.availableTags,
             onDismiss = { showCreateDialog = false },
             onConfirm = { title, body, url, groupId, divisionId, tags, actions, actionUrls ->
-                viewModel.createAndDispatch(title, body, url, groupId, divisionId, tags, actions, actionUrls)
+                viewModel.createAndDispatch(
+                    title, body, url, groupId, divisionId, tags, actions, actionUrls
+                )
                 showCreateDialog = false
-            }
-        )
+            })
     }
 
     campaignToEdit?.let { campaign ->
         EditCampaignSheet(
-            campaign = campaign, groups = uiState.groups, divisions = uiState.divisions,
+            campaign = campaign,
+            groups = uiState.groups,
+            divisions = uiState.divisions,
             availableTags = uiState.availableTags,
             onDismiss = { campaignToEdit = null },
-            onConfirm = { request -> viewModel.updateCampaign(campaign.id, request); campaignToEdit = null }
-        )
+            onConfirm = { request ->
+                viewModel.updateCampaign(
+                    campaign.id, request
+                ); campaignToEdit = null
+            })
     }
 }
 
@@ -179,57 +266,107 @@ fun CampaignScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit) {
-    val isSent      = campaign.status == "SENT"
+    val isSent = campaign.status == "SENT"
     val statusColor = if (isSent) ColorSent else ColorDraft
     val statusLabel = if (isSent) "Enviada" else "Rascunho"
-    var showSheet   by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
 
-    Card(onClick = { showSheet = true }, modifier = Modifier.fillMaxWidth(),
+    Card(
+        onClick = { showSheet = true },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)) {
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Campaign, contentDescription = null,
-                            tint = WtcBlue, modifier = Modifier.size(20.dp))
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(WtcBluePale), contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Campaign,
+                            contentDescription = null,
+                            tint = WtcBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(campaign.title, fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                            color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(formatCampaignDate(campaign.createdAt), fontSize = 11.sp, color = TextMuted)
+                        Text(
+                            campaign.title,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            formatCampaignDate(campaign.createdAt),
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = statusColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)) {
-                        Text(statusLabel, fontSize = 11.sp, color = statusColor,
+                    Surface(
+                        color = statusColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text(
+                            statusLabel,
+                            fontSize = 11.sp,
+                            color = statusColor,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
                     }
                     IconButton(onClick = { onEdit() }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar",
-                            tint = WtcBlue, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Editar",
+                            tint = WtcBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
             HorizontalDivider(color = Color(0xFFF0F6FA))
             Spacer(modifier = Modifier.height(10.dp))
-            Text(campaign.body, fontSize = 13.sp, color = TextMuted,
-                maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+            Text(
+                campaign.body,
+                fontSize = 13.sp,
+                color = TextMuted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp
+            )
             campaign.url?.takeIf { it.isNotBlank() }?.let {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Link, contentDescription = null,
-                        tint = WtcBlue, modifier = Modifier.size(13.dp))
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = null,
+                        tint = WtcBlue,
+                        modifier = Modifier.size(13.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(it, fontSize = 11.sp, color = WtcBlue,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        it,
+                        fontSize = 11.sp,
+                        color = WtcBlue,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
             campaign.actions?.takeIf { it.isNotEmpty() }?.let { actions ->
@@ -237,20 +374,32 @@ fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(actions) { action ->
                         Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
-                            Text(action.title, fontSize = 11.sp, color = WtcBlue,
+                            Text(
+                                action.title,
+                                fontSize = 11.sp,
+                                color = WtcBlue,
                                 fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
                         }
                     }
                 }
             }
             if (!isSent) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onDispatch,
-                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                Button(
+                    onClick = onDispatch,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp),
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                ) {
+                    Icon(
+                        Icons.Default.Send,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Disparar Agora", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
@@ -259,74 +408,151 @@ fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit)
     }
 
     if (showSheet) {
-        ModalBottomSheet(onDismissRequest = { showSheet = false },
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
             containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
-            Column(modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp).padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Campaign, contentDescription = null,
-                            tint = WtcBlue, modifier = Modifier.size(22.dp))
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(WtcBluePale), contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Campaign,
+                            contentDescription = null,
+                            tint = WtcBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(campaign.title, fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text(formatCampaignDate(campaign.createdAt), fontSize = 11.sp, color = TextMuted)
+                        Text(
+                            campaign.title,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            formatCampaignDate(campaign.createdAt),
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
                     }
-                    Surface(color = statusColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)) {
-                        Text(statusLabel, fontSize = 11.sp, color = statusColor,
+                    Surface(
+                        color = statusColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text(
+                            statusLabel,
+                            fontSize = 11.sp,
+                            color = statusColor,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
                     }
                 }
                 HorizontalDivider(color = Color(0xFFF0F6FA))
-                Text("Mensagem", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
+                Text(
+                    "Mensagem",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted
+                )
                 Text(campaign.body, fontSize = 14.sp, color = TextPrimary, lineHeight = 20.sp)
                 campaign.url?.takeIf { it.isNotBlank() }?.let { url ->
                     HorizontalDivider(color = Color(0xFFF0F6FA))
-                    Text("Link", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.Link, contentDescription = null,
-                            tint = WtcBlue, modifier = Modifier.size(14.dp))
-                        Text(url, fontSize = 13.sp, color = WtcBlue,
-                            overflow = TextOverflow.Ellipsis, maxLines = 2)
+                    Text(
+                        "Link",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMuted
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Link,
+                            contentDescription = null,
+                            tint = WtcBlue,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            url,
+                            fontSize = 13.sp,
+                            color = WtcBlue,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 2
+                        )
                     }
                 }
                 campaign.actions?.takeIf { it.isNotEmpty() }?.let { actions ->
                     HorizontalDivider(color = Color(0xFFF0F6FA))
-                    Text("Botões de ação", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
+                    Text(
+                        "Botões de ação",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMuted
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         actions.forEach { action ->
                             Surface(color = WtcBluePale, shape = RoundedCornerShape(8.dp)) {
-                                Text(action.title, fontSize = 13.sp, color = WtcBlue,
+                                Text(
+                                    action.title,
+                                    fontSize = 13.sp,
+                                    color = WtcBlue,
                                     fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
                             }
                         }
                     }
                 }
                 HorizontalDivider(color = Color(0xFFF0F6FA))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { showSheet = false; onEdit() },
-                        modifier = Modifier.weight(1f).height(46.dp),
+                    OutlinedButton(
+                        onClick = { showSheet = false; onEdit() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = WtcBlue),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WtcBlue.copy(alpha = 0.5f))) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, WtcBlue.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Editar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                     if (!isSent) {
-                        Button(onClick = { showSheet = false; onDispatch() },
-                            modifier = Modifier.weight(1f).height(46.dp),
+                        Button(
+                            onClick = { showSheet = false; onDispatch() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)) {
-                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(15.dp))
+                            colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
+                        ) {
+                            Icon(
+                                Icons.Default.Send,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Disparar", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
@@ -342,61 +568,83 @@ fun CampaignCard(campaign: Campaign, onDispatch: () -> Unit, onEdit: () -> Unit)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateCampaignSheet(
-    groups: List<Group>, divisions: List<Division>, availableTags: List<String>,
+    groups: List<Group>,
+    divisions: List<Division>,
+    availableTags: List<String>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String?, String?, String?, List<String>,
-                List<ActionButton>, Map<String, String>) -> Unit
+    onConfirm: (
+        String, String, String?, String?, String?, List<String>, List<ActionButton>, Map<String, String>
+    ) -> Unit
 ) {
-    var title        by remember { mutableStateOf("") }
-    var body         by remember { mutableStateOf("") }
-    var url          by remember { mutableStateOf("") }
-    var btn1Title    by remember { mutableStateOf("") }
-    var btn1Url      by remember { mutableStateOf("") }
-    var btn2Title    by remember { mutableStateOf("") }
-    var btn2Url      by remember { mutableStateOf("") }
-    var showActions  by remember { mutableStateOf(false) }
-    var selectedGroup    by remember { mutableStateOf<Group?>(null) }
+    var title by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var btn1Title by remember { mutableStateOf("") }
+    var btn1Url by remember { mutableStateOf("") }
+    var btn2Title by remember { mutableStateOf("") }
+    var btn2Url by remember { mutableStateOf("") }
+    var showActions by remember { mutableStateOf(false) }
+    var selectedGroup by remember { mutableStateOf<Group?>(null) }
     var selectedDivision by remember { mutableStateOf<Division?>(null) }
-    var selectedTags     by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var groupExpanded    by remember { mutableStateOf(false) }
+    var selectedTags by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var groupExpanded by remember { mutableStateOf(false) }
     var divisionExpanded by remember { mutableStateOf(false) }
     var targetMode by remember { mutableStateOf("group") }
 
     val uploadViewModel: ImageUploadViewModel = viewModel()
     val uploadState by uploadViewModel.uiState.collectAsState()
-    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
-    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileUri by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey by remember { mutableStateOf<String?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
-    var pendingIsPdf    by remember { mutableStateOf(false) }
+    var pendingIsPdf by remember { mutableStateOf(false) }
 
-    val isValid = title.isNotBlank() && (body.isNotBlank() || pendingFileKey != null) && when (targetMode) {
-        "group"    -> selectedGroup != null
-        "division" -> selectedDivision != null
-        "tags"     -> selectedTags.isNotEmpty()
-        else       -> false
-    }
+    val isValid =
+        title.isNotBlank() && (body.isNotBlank() || pendingFileKey != null) && when (targetMode) {
+            "group" -> selectedGroup != null
+            "division" -> selectedDivision != null
+            "tags" -> selectedTags.isNotEmpty()
+            else -> false
+        }
 
-    ModalBottomSheet(onDismissRequest = onDismiss,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
         containerColor = Color.White,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp).padding(bottom = 40.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Campaign, contentDescription = null,
-                        tint = WtcBlue, modifier = Modifier.size(20.dp))
-                    Text("Nova Campanha", fontWeight = FontWeight.Bold,
-                        color = TextPrimary, fontSize = 16.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Campaign,
+                        contentDescription = null,
+                        tint = WtcBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        "Nova Campanha",
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        fontSize = 16.sp
+                    )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider(color = Color(0xFFF0F6FA))
             }
             item { CampaignField("Título *", title, { title = it }) }
-            item { CampaignField("Mensagem (opcional se houver anexo)", body, { body = it }, maxLines = 4) }
+            item {
+                CampaignField(
+                    "Mensagem (opcional se houver anexo)", body, { body = it }, maxLines = 4
+                )
+            }
             item { CampaignField("URL (opcional)", url, { url = it }, icon = Icons.Default.Link) }
 
             // Preview do arquivo pendente
@@ -404,34 +652,37 @@ fun CreateCampaignSheet(
                 item {
                     ImagePreviewBar(
                         imageUrl = pendingFileUri!!,
-                        isPdf    = pendingIsPdf,
+                        isPdf = pendingIsPdf,
                         fileName = pendingFileName,
                         onCancel = {
-                            pendingFileUri  = null
-                            pendingFileKey  = null
+                            pendingFileUri = null
+                            pendingFileKey = null
                             pendingFileName = null
-                            pendingIsPdf    = false
+                            pendingIsPdf = false
                             uploadViewModel.reset()
-                        }
-                    )
+                        })
                 }
             }
 
             // Botão de anexo
             item {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(13.dp))
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(WtcBluePale), contentAlignment = Alignment.Center
+                    ) {
                         ImagePickerButton(
-                            uploadViewModel = uploadViewModel,
-                            onImageReady    = { url2, key ->
-                                pendingFileUri  = url2
-                                pendingFileKey  = key
-                                pendingIsPdf    = key.endsWith(".pdf", ignoreCase = true)
+                            uploadViewModel = uploadViewModel, onImageReady = { url2, key ->
+                                pendingFileUri = url2
+                                pendingFileKey = key
+                                pendingIsPdf = key.endsWith(".pdf", ignoreCase = true)
                                 pendingFileName = uploadState.fileName
-                            }
-                        )
+                            })
                     }
                     Text("Anexar imagem ou PDF", fontSize = 13.sp, color = TextMuted)
                 }
@@ -439,32 +690,54 @@ fun CreateCampaignSheet(
 
             item { TargetModeSelector(targetMode) { targetMode = it } }
             if (targetMode == "group") item {
-                CampaignDropdown("Grupo", selectedGroup?.name ?: "Selecione...",
-                    groupExpanded, { groupExpanded = !groupExpanded }) {
-                    DropdownMenuItem(text = { Text("Nenhum") },
+                CampaignDropdown(
+                    "Grupo",
+                    selectedGroup?.name ?: "Selecione...",
+                    groupExpanded,
+                    { groupExpanded = !groupExpanded }) {
+                    DropdownMenuItem(
+                        text = { Text("Nenhum") },
                         onClick = { selectedGroup = null; groupExpanded = false })
-                    groups.forEach { g -> DropdownMenuItem(text = { Text(g.name) },
-                        onClick = { selectedGroup = g; groupExpanded = false }) }
+                    groups.forEach { g ->
+                        DropdownMenuItem(
+                            text = { Text(g.name) },
+                            onClick = { selectedGroup = g; groupExpanded = false })
+                    }
                 }
             }
             if (targetMode == "division") item {
-                CampaignDropdown("Divisão", selectedDivision?.name ?: "Selecione...",
-                    divisionExpanded, { divisionExpanded = !divisionExpanded }) {
-                    DropdownMenuItem(text = { Text("Nenhuma") },
+                CampaignDropdown(
+                    "Divisão",
+                    selectedDivision?.name ?: "Selecione...",
+                    divisionExpanded,
+                    { divisionExpanded = !divisionExpanded }) {
+                    DropdownMenuItem(
+                        text = { Text("Nenhuma") },
                         onClick = { selectedDivision = null; divisionExpanded = false })
-                    divisions.forEach { d -> DropdownMenuItem(text = { Text(d.name) },
-                        onClick = { selectedDivision = d; divisionExpanded = false }) }
+                    divisions.forEach { d ->
+                        DropdownMenuItem(
+                            text = { Text(d.name) },
+                            onClick = { selectedDivision = d; divisionExpanded = false })
+                    }
                 }
             }
             if (targetMode == "tags" && availableTags.isNotEmpty()) item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(availableTags) { tag ->
-                        FilterChip(selected = selectedTags.contains(tag),
-                            onClick = { selectedTags = if (selectedTags.contains(tag)) selectedTags - tag else selectedTags + tag },
+                        FilterChip(
+                            selected = selectedTags.contains(tag),
+                            onClick = {
+                                selectedTags =
+                                    if (selectedTags.contains(tag)) selectedTags - tag else selectedTags + tag
+                            },
                             label = { Text(tag, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = WtcBlue, selectedLabelColor = Color.White,
-                                containerColor = WtcBluePale, labelColor = WtcBlue))
+                                selectedContainerColor = WtcBlue,
+                                selectedLabelColor = Color.White,
+                                containerColor = WtcBluePale,
+                                labelColor = WtcBlue
+                            )
+                        )
                     }
                 }
             }
@@ -493,20 +766,33 @@ fun CreateCampaignSheet(
                                 }
                                 append(body)
                             }
-                            val actions    = buildActions(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
-                            val actionUrls = buildActionUrls(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
-                            onConfirm(title, finalBody, url.takeIf { it.isNotBlank() },
+                            val actions =
+                                buildActions(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
+                            val actionUrls =
+                                buildActionUrls(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
+                            onConfirm(
+                                title,
+                                finalBody,
+                                url.takeIf { it.isNotBlank() },
                                 if (targetMode == "group") selectedGroup?.id else null,
                                 if (targetMode == "division") selectedDivision?.id else null,
                                 if (targetMode == "tags") selectedTags.toList() else emptyList(),
-                                actions, actionUrls)
+                                actions,
+                                actionUrls
+                            )
                         },
                         enabled = isValid,
-                        modifier = Modifier.weight(2f).height(48.dp),
+                        modifier = Modifier
+                            .weight(2f)
+                            .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Criar e Disparar", fontWeight = FontWeight.SemiBold)
                     }
@@ -521,49 +807,70 @@ fun CreateCampaignSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditCampaignSheet(
-    campaign: Campaign, groups: List<Group>, divisions: List<Division>,
-    availableTags: List<String>, onDismiss: () -> Unit,
+    campaign: Campaign,
+    groups: List<Group>,
+    divisions: List<Division>,
+    availableTags: List<String>,
+    onDismiss: () -> Unit,
     onConfirm: (CampaignRequest) -> Unit
 ) {
-    var title        by remember { mutableStateOf(campaign.title) }
-    var body         by remember { mutableStateOf(campaign.body) }
-    var url          by remember { mutableStateOf(campaign.url ?: "") }
-    var btn1Title    by remember { mutableStateOf(campaign.actions?.getOrNull(0)?.title ?: "") }
-    var btn1Url      by remember { mutableStateOf("") }
-    var btn2Title    by remember { mutableStateOf(campaign.actions?.getOrNull(1)?.title ?: "") }
-    var btn2Url      by remember { mutableStateOf("") }
-    var showActions  by remember { mutableStateOf(campaign.actions?.isNotEmpty() == true) }
-    var selectedGroup    by remember { mutableStateOf<Group?>(null) }
+    var title by remember { mutableStateOf(campaign.title) }
+    var body by remember { mutableStateOf(campaign.body) }
+    var url by remember { mutableStateOf(campaign.url ?: "") }
+    var btn1Title by remember { mutableStateOf(campaign.actions?.getOrNull(0)?.title ?: "") }
+    var btn1Url by remember { mutableStateOf("") }
+    var btn2Title by remember { mutableStateOf(campaign.actions?.getOrNull(1)?.title ?: "") }
+    var btn2Url by remember { mutableStateOf("") }
+    var showActions by remember { mutableStateOf(campaign.actions?.isNotEmpty() == true) }
+    var selectedGroup by remember { mutableStateOf<Group?>(null) }
     var selectedDivision by remember { mutableStateOf<Division?>(null) }
-    var selectedTags     by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var groupExpanded    by remember { mutableStateOf(false) }
+    var selectedTags by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var groupExpanded by remember { mutableStateOf(false) }
     var divisionExpanded by remember { mutableStateOf(false) }
-    var targetMode by remember { mutableStateOf(
-        when { campaign.targetGroupId != null -> "group"; campaign.targetDivisionId != null -> "division"; else -> "tags" }
-    )}
+    var targetMode by remember {
+        mutableStateOf(
+            when {
+                campaign.targetGroupId != null -> "group"; campaign.targetDivisionId != null -> "division"; else -> "tags"
+            }
+        )
+    }
 
     val uploadViewModel: ImageUploadViewModel = viewModel()
     val uploadState by uploadViewModel.uiState.collectAsState()
-    var pendingFileUri  by remember { mutableStateOf<String?>(null) }
-    var pendingFileKey  by remember { mutableStateOf<String?>(null) }
+    var pendingFileUri by remember { mutableStateOf<String?>(null) }
+    var pendingFileKey by remember { mutableStateOf<String?>(null) }
     var pendingFileName by remember { mutableStateOf<String?>(null) }
-    var pendingIsPdf    by remember { mutableStateOf(false) }
+    var pendingIsPdf by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss,
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
         containerColor = Color.White,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp).padding(bottom = 40.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = null,
-                        tint = WtcBlue, modifier = Modifier.size(20.dp))
-                    Text("Editar Campanha", fontWeight = FontWeight.Bold,
-                        color = TextPrimary, fontSize = 16.sp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = WtcBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        "Editar Campanha",
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        fontSize = 16.sp
+                    )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider(color = Color(0xFFF0F6FA))
@@ -577,34 +884,37 @@ fun EditCampaignSheet(
                 item {
                     ImagePreviewBar(
                         imageUrl = pendingFileUri!!,
-                        isPdf    = pendingIsPdf,
+                        isPdf = pendingIsPdf,
                         fileName = pendingFileName,
                         onCancel = {
-                            pendingFileUri  = null
-                            pendingFileKey  = null
+                            pendingFileUri = null
+                            pendingFileKey = null
                             pendingFileName = null
-                            pendingIsPdf    = false
+                            pendingIsPdf = false
                             uploadViewModel.reset()
-                        }
-                    )
+                        })
                 }
             }
 
             // Botão de anexo
             item {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(13.dp))
-                        .background(WtcBluePale), contentAlignment = Alignment.Center) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(WtcBluePale), contentAlignment = Alignment.Center
+                    ) {
                         ImagePickerButton(
-                            uploadViewModel = uploadViewModel,
-                            onImageReady    = { url2, key ->
-                                pendingFileUri  = url2
-                                pendingFileKey  = key
-                                pendingIsPdf    = key.endsWith(".pdf", ignoreCase = true)
+                            uploadViewModel = uploadViewModel, onImageReady = { url2, key ->
+                                pendingFileUri = url2
+                                pendingFileKey = key
+                                pendingIsPdf = key.endsWith(".pdf", ignoreCase = true)
                                 pendingFileName = uploadState.fileName
-                            }
-                        )
+                            })
                     }
                     Text("Anexar imagem ou PDF", fontSize = 13.sp, color = TextMuted)
                 }
@@ -612,19 +922,33 @@ fun EditCampaignSheet(
 
             item { TargetModeSelector(targetMode) { targetMode = it } }
             if (targetMode == "group") item {
-                CampaignDropdown("Grupo", selectedGroup?.name
-                    ?: groups.firstOrNull { it.id == campaign.targetGroupId }?.name
-                    ?: "Selecione...", groupExpanded, { groupExpanded = !groupExpanded }) {
-                    groups.forEach { g -> DropdownMenuItem(text = { Text(g.name) },
-                        onClick = { selectedGroup = g; groupExpanded = false }) }
+                CampaignDropdown(
+                    "Grupo",
+                    selectedGroup?.name
+                        ?: groups.firstOrNull { it.id == campaign.targetGroupId }?.name
+                        ?: "Selecione...",
+                    groupExpanded,
+                    { groupExpanded = !groupExpanded }) {
+                    groups.forEach { g ->
+                        DropdownMenuItem(
+                            text = { Text(g.name) },
+                            onClick = { selectedGroup = g; groupExpanded = false })
+                    }
                 }
             }
             if (targetMode == "division") item {
-                CampaignDropdown("Divisão", selectedDivision?.name
-                    ?: divisions.firstOrNull { it.id == campaign.targetDivisionId }?.name
-                    ?: "Selecione...", divisionExpanded, { divisionExpanded = !divisionExpanded }) {
-                    divisions.forEach { d -> DropdownMenuItem(text = { Text(d.name) },
-                        onClick = { selectedDivision = d; divisionExpanded = false }) }
+                CampaignDropdown(
+                    "Divisão",
+                    selectedDivision?.name
+                        ?: divisions.firstOrNull { it.id == campaign.targetDivisionId }?.name
+                        ?: "Selecione...",
+                    divisionExpanded,
+                    { divisionExpanded = !divisionExpanded }) {
+                    divisions.forEach { d ->
+                        DropdownMenuItem(
+                            text = { Text(d.name) },
+                            onClick = { selectedDivision = d; divisionExpanded = false })
+                    }
                 }
             }
             item { ActionButtonsToggle(showActions) { showActions = it } }
@@ -652,25 +976,37 @@ fun EditCampaignSheet(
                                 }
                                 append(body)
                             }
-                            val actions    = buildActions(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
-                            val actionUrls = buildActionUrls(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
-                            onConfirm(CampaignRequest(
-                                title            = title,
-                                body             = finalBody,
-                                url              = url.takeIf { it.isNotBlank() },
-                                targetGroupId    = if (targetMode == "group") (selectedGroup?.id ?: campaign.targetGroupId) else null,
-                                targetDivisionId = if (targetMode == "division") (selectedDivision?.id ?: campaign.targetDivisionId) else null,
-                                targetTags       = if (targetMode == "tags") selectedTags.toList() else emptyList(),
-                                actions          = actions,
-                                actionUrls       = actionUrls
-                            ))
+                            val actions =
+                                buildActions(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
+                            val actionUrls =
+                                buildActionUrls(showActions, btn1Title, btn1Url, btn2Title, btn2Url)
+                            onConfirm(
+                                CampaignRequest(
+                                    title = title,
+                                    body = finalBody,
+                                    url = url.takeIf { it.isNotBlank() },
+                                    targetGroupId = if (targetMode == "group") (selectedGroup?.id
+                                        ?: campaign.targetGroupId) else null,
+                                    targetDivisionId = if (targetMode == "division") (selectedDivision?.id
+                                        ?: campaign.targetDivisionId) else null,
+                                    targetTags = if (targetMode == "tags") selectedTags.toList() else emptyList(),
+                                    actions = actions,
+                                    actionUrls = actionUrls
+                                )
+                            )
                         },
                         enabled = title.isNotBlank(),
-                        modifier = Modifier.weight(2f).height(48.dp),
+                        modifier = Modifier
+                            .weight(2f)
+                            .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Salvar", fontWeight = FontWeight.SemiBold)
                     }
@@ -684,38 +1020,66 @@ fun EditCampaignSheet(
 
 @Composable
 private fun CampaignField(
-    label: String, value: String, onValueChange: (String) -> Unit,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
     maxLines: Int = 1,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     OutlinedTextField(
-        value = value, onValueChange = onValueChange,
+        value = value,
+        onValueChange = onValueChange,
         label = { Text(label, fontSize = 12.sp) },
         modifier = Modifier.fillMaxWidth(),
-        singleLine = maxLines == 1, maxLines = maxLines,
-        leadingIcon = icon?.let { { Icon(it, contentDescription = null,
-            tint = WtcBlueHint, modifier = Modifier.size(18.dp)) } },
+        singleLine = maxLines == 1,
+        maxLines = maxLines,
+        leadingIcon = icon?.let {
+            {
+                Icon(
+                    it,
+                    contentDescription = null,
+                    tint = WtcBlueHint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        },
         shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
-            cursorColor = WtcBlue, focusedLabelColor = WtcBlue,
-            focusedContainerColor   = WtcBluePale.copy(alpha = 0.3f),
-            unfocusedContainerColor = Color(0xFFFAFCFE))
+            focusedBorderColor = WtcBlue,
+            unfocusedBorderColor = WtcBlueHint,
+            cursorColor = WtcBlue,
+            focusedLabelColor = WtcBlue,
+            focusedContainerColor = WtcBluePale.copy(alpha = 0.3f),
+            unfocusedContainerColor = Color(0xFFFAFCFE)
+        )
     )
 }
 
 @Composable
 private fun TargetModeSelector(targetMode: String, onSelect: (String) -> Unit) {
     Column {
-        Text("Enviar para", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-            color = TextPrimary, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            "Enviar para",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("group" to "Grupo", "division" to "Divisão", "tags" to "Tags").forEach { (mode, label) ->
-                FilterChip(selected = targetMode == mode, onClick = { onSelect(mode) },
+            listOf(
+                "group" to "Grupo", "division" to "Divisão", "tags" to "Tags"
+            ).forEach { (mode, label) ->
+                FilterChip(
+                    selected = targetMode == mode,
+                    onClick = { onSelect(mode) },
                     label = { Text(label, fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = WtcBlue, selectedLabelColor = Color.White,
-                        containerColor = WtcBluePale, labelColor = WtcBlue))
+                        selectedContainerColor = WtcBlue,
+                        selectedLabelColor = Color.White,
+                        containerColor = WtcBluePale,
+                        labelColor = WtcBlue
+                    )
+                )
             }
         }
     }
@@ -724,34 +1088,47 @@ private fun TargetModeSelector(targetMode: String, onSelect: (String) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CampaignDropdown(
-    label: String, value: String, expanded: Boolean,
-    onExpandedChange: () -> Unit, content: @Composable ColumnScope.() -> Unit
+    label: String,
+    value: String,
+    expanded: Boolean,
+    onExpandedChange: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { onExpandedChange() }) {
-        OutlinedTextField(value = value, onValueChange = {}, readOnly = true,
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
             label = { Text(label, fontSize = 12.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint))
-        ExposedDropdownMenu(expanded = expanded,
-            onDismissRequest = { onExpandedChange() }, content = content)
+                focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint
+            )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded, onDismissRequest = { onExpandedChange() }, content = content
+        )
     }
 }
 
 @Composable
 private fun ActionButtonsToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(checkedColor = WtcBlue))
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(checkedColor = WtcBlue)
+        )
         Text("Adicionar botões de ação", fontSize = 13.sp, color = TextPrimary)
     }
 }
 
 private fun buildActions(
-    showActions: Boolean, btn1Title: String, btn1Url: String,
-    btn2Title: String, btn2Url: String
+    showActions: Boolean, btn1Title: String, btn1Url: String, btn2Title: String, btn2Url: String
 ): List<ActionButton> {
     if (!showActions) return emptyList()
     val list = mutableListOf<ActionButton>()
@@ -761,8 +1138,7 @@ private fun buildActions(
 }
 
 private fun buildActionUrls(
-    showActions: Boolean, btn1Title: String, btn1Url: String,
-    btn2Title: String, btn2Url: String
+    showActions: Boolean, btn1Title: String, btn1Url: String, btn2Title: String, btn2Url: String
 ): Map<String, String> {
     if (!showActions) return emptyMap()
     val map = mutableMapOf<String, String>()
@@ -777,5 +1153,7 @@ private fun formatCampaignDate(createdAt: String?): String {
         val date = createdAt.take(10).split("-")
         val time = createdAt.drop(11).take(5)
         "${date[2]}/${date[1]}/${date[0]} às $time"
-    } catch (e: Exception) { "" }
+    } catch (e: Exception) {
+        ""
+    }
 }

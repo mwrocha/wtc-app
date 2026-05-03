@@ -32,52 +32,53 @@ import br.com.fiap.wtcconnecta.data.model.MessageStatus
  */
 @Composable
 fun MessageStatusIcon(
-    status: MessageStatus,
-    modifier: Modifier = Modifier
+    status: MessageStatus, modifier: Modifier = Modifier
 ) {
     val iconColor = when (status) {
-        MessageStatus.READ    -> Color(0xFF4FC3F7)       // azul claro
-        MessageStatus.FAILED  -> Color(0xFFEF5350)       // vermelho
-        else                  -> Color.White.copy(alpha = 0.7f) // cinza/branco
+        MessageStatus.READ -> Color(0xFF4FC3F7)       // azul claro
+        MessageStatus.FAILED -> Color(0xFFEF5350)       // vermelho
+        else -> Color.White.copy(alpha = 0.7f) // cinza/branco
     }
 
     when (status) {
         MessageStatus.SENDING -> Icon(
-            imageVector        = Icons.Default.Schedule,
+            imageVector = Icons.Default.Schedule,
             contentDescription = "Enviando",
-            tint               = iconColor,
-            modifier           = modifier.size(12.dp)
+            tint = iconColor,
+            modifier = modifier.size(12.dp)
         )
+
         MessageStatus.SENT -> Icon(
-            imageVector        = Icons.Default.Check,
+            imageVector = Icons.Default.Check,
             contentDescription = "Enviado",
-            tint               = iconColor,
-            modifier           = modifier.size(12.dp)
+            tint = iconColor,
+            modifier = modifier.size(12.dp)
         )
+
         MessageStatus.DELIVERED -> Icon(
-            imageVector        = Icons.Default.DoneAll,
+            imageVector = Icons.Default.DoneAll,
             contentDescription = "Entregue",
-            tint               = iconColor,
-            modifier           = modifier.size(12.dp)
+            tint = iconColor,
+            modifier = modifier.size(12.dp)
         )
+
         MessageStatus.READ -> Icon(
-            imageVector        = Icons.Default.DoneAll,
+            imageVector = Icons.Default.DoneAll,
             contentDescription = "Lido",
-            tint               = iconColor,
-            modifier           = modifier.size(12.dp)
+            tint = iconColor,
+            modifier = modifier.size(12.dp)
         )
+
         MessageStatus.FAILED -> Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector        = Icons.Default.Error,
+                imageVector = Icons.Default.Error,
                 contentDescription = "Falha",
-                tint               = iconColor,
-                modifier           = modifier.size(12.dp)
+                tint = iconColor,
+                modifier = modifier.size(12.dp)
             )
             Spacer(modifier = Modifier.width(2.dp))
             Text(
-                text     = "Falha",
-                fontSize = 9.sp,
-                color    = iconColor
+                text = "Falha", fontSize = 9.sp, color = iconColor
             )
         }
     }

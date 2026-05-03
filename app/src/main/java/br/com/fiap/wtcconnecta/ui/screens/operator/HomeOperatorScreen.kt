@@ -28,13 +28,13 @@ import br.com.fiap.wtcconnecta.data.model.Division
 import br.com.fiap.wtcconnecta.data.model.Group
 import br.com.fiap.wtcconnecta.viewmodel.HomeOperatorViewModel
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,8 +45,8 @@ fun HomeOperatorScreen(
     onClientClick: (clientId: String) -> Unit,
     viewModel: HomeOperatorViewModel = viewModel()
 ) {
-    val uiState      by viewModel.uiState.collectAsState()
-    val searchQuery  by viewModel.searchQuery.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedTags by viewModel.selectedTags.collectAsState()
     var showGroupMessageDialog by remember { mutableStateOf(false) }
 
@@ -82,19 +82,28 @@ fun HomeOperatorScreen(
                         .padding(horizontal = 24.dp)
                         .padding(top = 28.dp, bottom = 28.dp)
                 ) {
-                    Text("CLIENTES", fontSize = 11.sp,
+                    Text(
+                        "CLIENTES",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White.copy(alpha = 0.60f),
-                        letterSpacing = 1.5.sp)
+                        letterSpacing = 1.5.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Ver Clientes", fontSize = 24.sp,
+                    Text(
+                        "Ver Clientes",
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White, lineHeight = 28.sp)
+                        color = Color.White,
+                        lineHeight = 28.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Busque e gerencie seus clientes",
+                    Text(
+                        "Busque e gerencie seus clientes",
                         fontSize = 13.sp,
                         color = Color.White.copy(alpha = 0.65f),
-                        letterSpacing = 0.2.sp)
+                        letterSpacing = 0.2.sp
+                    )
                 }
             }
 
@@ -109,27 +118,38 @@ fun HomeOperatorScreen(
                     value = searchQuery,
                     onValueChange = { viewModel.onSearchQueryChange(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Buscar por nome...", color = TextMuted.copy(alpha = 0.6f)) },
+                    placeholder = {
+                        Text(
+                            "Buscar por nome...", color = TextMuted.copy(alpha = 0.6f)
+                        )
+                    },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null,
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
                             tint = if (searchQuery.isNotBlank()) WtcBlue else WtcBlueHint,
-                            modifier = Modifier.size(20.dp))
+                            modifier = Modifier.size(20.dp)
+                        )
                     },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
                             IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Close, contentDescription = null,
-                                    tint = TextMuted, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     },
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = WtcBlue,
+                        focusedBorderColor = WtcBlue,
                         unfocusedBorderColor = WtcBlueHint,
-                        cursorColor          = WtcBlue,
-                        focusedContainerColor   = WtcBluePale.copy(alpha = 0.4f),
+                        cursorColor = WtcBlue,
+                        focusedContainerColor = WtcBluePale.copy(alpha = 0.4f),
                         unfocusedContainerColor = Color(0xFFFAFCFE)
                     )
                 )
@@ -147,13 +167,13 @@ fun HomeOperatorScreen(
                     items(uiState.availableTags) { tag ->
                         FilterChip(
                             selected = selectedTags.contains(tag),
-                            onClick  = { viewModel.onTagSelected(tag) },
-                            label    = { Text(tag, fontSize = 12.sp) },
-                            colors   = FilterChipDefaults.filterChipColors(
+                            onClick = { viewModel.onTagSelected(tag) },
+                            label = { Text(tag, fontSize = 12.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = WtcBlue,
-                                selectedLabelColor     = Color.White,
-                                containerColor         = WtcBluePale,
-                                labelColor             = WtcBlue
+                                selectedLabelColor = Color.White,
+                                containerColor = WtcBluePale,
+                                labelColor = WtcBlue
                             )
                         )
                     }
@@ -166,40 +186,59 @@ fun HomeOperatorScreen(
                     uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                         CircularProgressIndicator(color = WtcBlue)
                     }
+
                     uiState.error != null -> Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null,
-                            tint = WtcBlueHint, modifier = Modifier.size(48.dp))
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = WtcBlueHint,
+                            modifier = Modifier.size(48.dp)
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(uiState.error ?: "Erro ao carregar", color = TextMuted)
                         Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = { viewModel.retryFetch() },
+                        Button(
+                            onClick = { viewModel.retryFetch() },
                             colors = ButtonDefaults.buttonColors(containerColor = WtcBlue),
-                            shape = RoundedCornerShape(10.dp)) {
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
                             Text("Tentar novamente")
                         }
                     }
+
                     uiState.clients.isEmpty() -> Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.PersonSearch, contentDescription = null,
-                            tint = WtcBlueHint, modifier = Modifier.size(56.dp))
+                        Icon(
+                            Icons.Default.PersonSearch,
+                            contentDescription = null,
+                            tint = WtcBlueHint,
+                            modifier = Modifier.size(56.dp)
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text("Nenhum cliente encontrado.", color = TextMuted, fontSize = 14.sp)
                     }
+
                     else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
                     ) {
                         item {
-                            Text("CLIENTES — ${uiState.clients.size}",
-                                fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                color = TextMuted, letterSpacing = 1.2.sp,
-                                modifier = Modifier.padding(bottom = 4.dp))
+                            Text(
+                                "CLIENTES — ${uiState.clients.size}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                letterSpacing = 1.2.sp,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
                         }
                         items(uiState.clients) { client ->
                             ClientCard(client = client, onClick = { onClientClick(client.id) })
@@ -213,7 +252,7 @@ fun HomeOperatorScreen(
     if (showGroupMessageDialog) {
         GroupMessageDialog(
             divisions = uiState.divisions,
-            groups    = uiState.groups,
+            groups = uiState.groups,
             onDismiss = { showGroupMessageDialog = false },
             onSendGroup = { text, groupId ->
                 viewModel.sendGroupMessage(text, groupId, currentOperatorId)
@@ -222,21 +261,24 @@ fun HomeOperatorScreen(
             onSendDivision = { text, divisionId ->
                 viewModel.sendDivisionMessage(text, divisionId, currentOperatorId)
                 showGroupMessageDialog = false
-            }
-        )
+            })
     }
 }
 
 @Composable
 fun ClientCard(client: Client, onClick: () -> Unit) {
     Card(
-        modifier  = Modifier.fillMaxWidth().clickable { onClick() },
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar inicial com fundo WtcBlueHint
@@ -244,21 +286,33 @@ fun ClientCard(client: Client, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(WtcBlueHint),
-                contentAlignment = Alignment.Center
+                    .background(WtcBlueHint), contentAlignment = Alignment.Center
             ) {
                 Text(
                     client.name.firstOrNull()?.uppercase() ?: "?",
-                    fontSize = 19.sp, fontWeight = FontWeight.Bold, color = WtcBlueDark
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = WtcBlueDark
                 )
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(client.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(client.email, fontSize = 12.sp, color = TextMuted,
+                Text(
+                    client.name,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    client.email,
+                    fontSize = 12.sp,
+                    color = TextMuted,
                     modifier = Modifier.padding(top = 2.dp),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 if (!client.tags.isNullOrEmpty()) {
                     Row(
                         modifier = Modifier.padding(top = 6.dp),
@@ -275,8 +329,12 @@ fun ClientCard(client: Client, onClick: () -> Unit) {
                     .background(WtcBlueHint),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null,
-                    tint = WtcBlueDark, modifier = Modifier.size(15.dp))
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = WtcBlueDark,
+                    modifier = Modifier.size(15.dp)
+                )
             }
         }
     }
@@ -285,11 +343,15 @@ fun ClientCard(client: Client, onClick: () -> Unit) {
 @Composable
 fun ClientChip(tag: String) {
     Surface(
-        color = WtcBluePale,
-        shape = RoundedCornerShape(6.dp)
+        color = WtcBluePale, shape = RoundedCornerShape(6.dp)
     ) {
-        Text(tag, fontSize = 10.sp, color = WtcBlue, fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp))
+        Text(
+            tag,
+            fontSize = 10.sp,
+            color = WtcBlue,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+        )
     }
 }
 
@@ -302,11 +364,11 @@ fun GroupMessageDialog(
     onSendGroup: (text: String, groupId: String) -> Unit,
     onSendDivision: (text: String, divisionId: String) -> Unit
 ) {
-    var messageText        by remember { mutableStateOf("") }
-    var divisionExpanded   by remember { mutableStateOf(false) }
-    var groupExpanded      by remember { mutableStateOf(false) }
-    var selectedDivision   by remember { mutableStateOf<Division?>(null) }
-    var selectedGroup      by remember { mutableStateOf<Group?>(null) }
+    var messageText by remember { mutableStateOf("") }
+    var divisionExpanded by remember { mutableStateOf(false) }
+    var groupExpanded by remember { mutableStateOf(false) }
+    var selectedDivision by remember { mutableStateOf<Division?>(null) }
+    var selectedGroup by remember { mutableStateOf<Group?>(null) }
     var sendToFullDivision by remember { mutableStateOf(false) }
 
     val filteredGroups = remember(selectedDivision) {
@@ -318,41 +380,53 @@ fun GroupMessageDialog(
         title = { Text("Mensagem para grupo", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                ExposedDropdownMenuBox(expanded = divisionExpanded,
+                ExposedDropdownMenuBox(
+                    expanded = divisionExpanded,
                     onExpandedChange = { divisionExpanded = !divisionExpanded }) {
                     OutlinedTextField(
                         value = selectedDivision?.name ?: "Selecione uma divisão...",
-                        onValueChange = {}, readOnly = true,
+                        onValueChange = {},
+                        readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(divisionExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint)
+                            focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint
+                        )
                     )
-                    ExposedDropdownMenu(expanded = divisionExpanded,
+                    ExposedDropdownMenu(
+                        expanded = divisionExpanded,
                         onDismissRequest = { divisionExpanded = false }) {
                         divisions.forEach { division ->
                             DropdownMenuItem(text = { Text(division.name) }, onClick = {
-                                selectedDivision = division; selectedGroup = null; divisionExpanded = false
+                                selectedDivision = division; selectedGroup =
+                                null; divisionExpanded = false
                             })
                         }
                     }
                 }
 
-                ExposedDropdownMenuBox(expanded = groupExpanded,
+                ExposedDropdownMenuBox(
+                    expanded = groupExpanded,
                     onExpandedChange = { groupExpanded = !groupExpanded }) {
                     OutlinedTextField(
                         value = selectedGroup?.name ?: "Selecione um grupo...",
-                        onValueChange = {}, readOnly = true,
+                        onValueChange = {},
+                        readOnly = true,
                         enabled = selectedDivision != null && !sendToFullDivision,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(groupExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint)
+                            focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint
+                        )
                     )
-                    ExposedDropdownMenu(expanded = groupExpanded,
-                        onDismissRequest = { groupExpanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = groupExpanded, onDismissRequest = { groupExpanded = false }) {
                         filteredGroups.forEach { group ->
                             DropdownMenuItem(text = { Text(group.name) }, onClick = {
                                 selectedGroup = group; groupExpanded = false
@@ -361,28 +435,36 @@ fun GroupMessageDialog(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable(enabled = selectedDivision != null) {
                         sendToFullDivision = !sendToFullDivision
                         if (sendToFullDivision) selectedGroup = null
                     }) {
-                    Checkbox(checked = sendToFullDivision,
+                    Checkbox(
+                        checked = sendToFullDivision,
                         onCheckedChange = { sendToFullDivision = it; if (it) selectedGroup = null },
                         enabled = selectedDivision != null,
-                        colors = CheckboxDefaults.colors(checkedColor = WtcBlue))
+                        colors = CheckboxDefaults.colors(checkedColor = WtcBlue)
+                    )
                     Text("Enviar para toda a divisão", fontSize = 14.sp, color = TextPrimary)
                 }
 
                 OutlinedTextField(
-                    value = messageText, onValueChange = { messageText = it },
+                    value = messageText,
+                    onValueChange = { messageText = it },
                     label = { Text("Mensagem") },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp),
                     minLines = 4,
                     maxLines = Int.MAX_VALUE,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
-                        cursorColor = WtcBlue)
+                        focusedBorderColor = WtcBlue,
+                        unfocusedBorderColor = WtcBlueHint,
+                        cursorColor = WtcBlue
+                    )
                 )
             }
         },
@@ -392,12 +474,10 @@ fun GroupMessageDialog(
                     if (sendToFullDivision) onSendDivision(messageText, selectedDivision!!.id)
                     else onSendGroup(messageText, selectedGroup!!.id)
                 },
-                enabled = messageText.isNotBlank() &&
-                        (selectedGroup != null || (sendToFullDivision && selectedDivision != null)),
+                enabled = messageText.isNotBlank() && (selectedGroup != null || (sendToFullDivision && selectedDivision != null)),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = WtcBlue)
             ) { Text("Enviar") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } }
-    )
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMuted) } })
 }

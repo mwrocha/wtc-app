@@ -9,16 +9,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class LoginResult(
-    val userId: String,
-    val role: String,
-    val name: String,
-    val email: String   // adicionado
+    val userId: String, val role: String, val name: String, val email: String   // adicionado
 )
 
 data class LoginUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val loginResult: LoginResult? = null
+    val isLoading: Boolean = false, val error: String? = null, val loginResult: LoginResult? = null
 )
 
 class LoginViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
@@ -35,25 +30,19 @@ class LoginViewModel(private val repository: AuthRepository = AuthRepository()) 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            repository.login(email, password)
-                .onSuccess { response ->
+            repository.login(email, password).onSuccess { response ->
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
-                            loginResult = LoginResult(
-                                userId = response.id,
-                                role = when (response.role) {
+                            isLoading = false, loginResult = LoginResult(
+                                userId = response.id, role = when (response.role) {
                                     "OPERATOR" -> "operador"
-                                    "CLIENT"   -> "cliente"
-                                    else       -> response.role.lowercase()
-                                },
-                                name  = response.name,
-                                email = response.email   // adicionado
+                                    "CLIENT" -> "cliente"
+                                    else -> response.role.lowercase()
+                                }, name = response.name, email = response.email   // adicionado
                             )
                         )
                     }
-                }
-                .onFailure { error ->
+                }.onFailure { error ->
                     val message = when {
                         error.message?.contains("401") == true -> "E-mail ou senha inválidos."
                         error.message?.contains("conexão") == true -> "Erro de conexão."

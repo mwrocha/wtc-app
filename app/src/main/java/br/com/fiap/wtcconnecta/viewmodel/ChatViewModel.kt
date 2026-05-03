@@ -51,8 +51,8 @@ class ChatViewModel(
         if (chatId != currentChatId) {
             ratingChecked = false
         }
-        currentChatId   = chatId
-        originalChatId  = chatId
+        currentChatId = chatId
+        originalChatId = chatId
         currentChatType = chatType
         currentLoggedId = loggedInUserId
 
@@ -64,43 +64,50 @@ class ChatViewModel(
     }
 
     private suspend fun fetchMessages(
-        chatId: String,
-        chatType: String,
-        loggedInUserId: String
+        chatId: String, chatType: String, loggedInUserId: String
     ) {
         try {
             val messages: List<Message> = when (chatType) {
                 "group" -> repository.getConversation(chatId)
-                else    -> {
+                else -> {
                     if (chatId.contains("@") && !chatId.contains("_")) {
                         emptyList()
                     } else if (!chatId.contains("@")) {
                         try {
                             val all = repository.getMyConversations()
                             val filtered = all.filter {
-                                it.recipientId == chatId || it.senderId == chatId ||
-                                        it.conversationId?.contains(chatId) == true
+                                it.recipientId == chatId || it.senderId == chatId || it.conversationId?.contains(
+                                    chatId
+                                ) == true
                             }
                             if (filtered.isNotEmpty()) {
                                 val realConversationId = filtered.first().conversationId
                                 val loggedEmail = getLoggedEmail()
-                                if (realConversationId != null &&
-                                    (loggedEmail == null || realConversationId.contains(loggedEmail))) {
+                                if (realConversationId != null && (loggedEmail == null || realConversationId.contains(
+                                        loggedEmail
+                                    ))
+                                ) {
                                     currentChatId = realConversationId
                                 }
                             }
                             filtered
-                        } catch (e: Exception) { emptyList() }
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
                     } else {
                         val byConversation = try {
                             repository.getConversation(chatId)
-                        } catch (e: Exception) { emptyList() }
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
 
                         if (byConversation.isEmpty()) {
                             try {
                                 repository.getMyConversations()
                                     .filter { it.conversationId == chatId }
-                            } catch (e: Exception) { emptyList() }
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
                         } else {
                             byConversation
                         }
@@ -109,10 +116,9 @@ class ChatViewModel(
             }
 
             val knownIds = _uiState.value.senderNames.keys
-            val unknownSenders = messages
-                .map { it.senderId }
-                .filter { it.isNotBlank() && it !in knownIds }
-                .distinct()
+            val unknownSenders =
+                messages.map { it.senderId }.filter { it.isNotBlank() && it !in knownIds }
+                    .distinct()
 
             val newNames = mutableMapOf<String, String>()
             for (senderId in unknownSenders) {
@@ -126,10 +132,10 @@ class ChatViewModel(
 
             _uiState.update {
                 it.copy(
-                    isLoading   = false,
-                    messages    = messages.sortedBy { msg -> msg.createdAt },
+                    isLoading = false,
+                    messages = messages.sortedBy { msg -> msg.createdAt },
                     senderNames = it.senderNames + newNames,
-                    error       = null
+                    error = null
                 )
             }
 
@@ -145,8 +151,7 @@ class ChatViewModel(
             Log.e("ChatViewModel", "Erro HTTP ${e.code()}: ${e.message()}")
             _uiState.update {
                 it.copy(
-                    isLoading = false,
-                    error = if (e.code() == 404) "Nenhuma mensagem encontrada."
+                    isLoading = false, error = if (e.code() == 404) "Nenhuma mensagem encontrada."
                     else "Erro ao carregar mensagens."
                 )
             }
@@ -237,51 +242,60 @@ class ChatViewModel(
 
     fun editMessage(messageId: String, newContent: String) {
         viewModelScope.launch {
-            repository.editMessage(messageId, newContent)
-                .onSuccess {
-                    _uiState.update { state ->
-                        state.copy(messages = state.messages.map { msg ->
-                            if (msg.id == messageId) msg.copy(contentRaw = newContent, edited = true)
-                            else msg
-                        })
-                    }
+            repository.editMessage(messageId, newContent).onSuccess {
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.map { msg ->
+                        if (msg.id == messageId) msg.copy(
+                            contentRaw = newContent, edited = true
+                        )
+                        else msg
+                    })
                 }
-                .onFailure { e ->
-                    _uiState.update { it.copy(actionError = e.message ?: "Erro ao editar mensagem") }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        actionError = e.message ?: "Erro ao editar mensagem"
+                    )
                 }
+            }
         }
     }
 
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
-            repository.deleteMessage(messageId)
-                .onSuccess {
-                    _uiState.update { state ->
-                        state.copy(messages = state.messages.filter { it.id != messageId })
-                    }
+            repository.deleteMessage(messageId).onSuccess {
+                _uiState.update { state ->
+                    state.copy(messages = state.messages.filter { it.id != messageId })
                 }
-                .onFailure { e ->
-                    _uiState.update { it.copy(actionError = e.message ?: "Erro ao excluir mensagem") }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        actionError = e.message ?: "Erro ao excluir mensagem"
+                    )
                 }
+            }
         }
     }
 
-    fun clearActionError() { _uiState.update { it.copy(actionError = null) } }
+    fun clearActionError() {
+        _uiState.update { it.copy(actionError = null) }
+    }
 
-    fun getSenderName(senderId: String): String =
-        _uiState.value.senderNames[senderId] ?: senderId
+    fun getSenderName(senderId: String): String = _uiState.value.senderNames[senderId] ?: senderId
 
     fun sendMessage(text: String, chatId: String, chatType: String, senderId: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
             val tempId = "temp_${System.currentTimeMillis()}"
             val tempMessage = Message(
-                id             = tempId,
-                body           = text,
-                senderId       = senderId,
+                id = tempId,
+                body = text,
+                senderId = senderId,
                 conversationId = currentChatId.ifBlank { chatId },
-                createdAt      = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date()),
-                statusRaw      = MessageStatus.SENDING.name
+                createdAt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(
+                    Date()
+                ),
+                statusRaw = MessageStatus.SENDING.name
             )
             _uiState.update { state -> state.copy(messages = state.messages + tempMessage) }
 
@@ -329,7 +343,7 @@ class ChatViewModel(
 
         val convId = currentChatId.ifBlank { originalChatId }
         if (convId.contains("@") && convId.contains("_")) {
-            val firstAt    = convId.indexOf("@")
+            val firstAt = convId.indexOf("@")
             val splitPoint = convId.indexOf("_", firstAt)
             if (splitPoint > 0) {
                 val emailA = convId.substring(0, splitPoint)
@@ -338,8 +352,10 @@ class ChatViewModel(
                     emailA.equals(senderEmail, ignoreCase = true) -> emailB
                     emailB.equals(senderEmail, ignoreCase = true) -> emailA
                     else -> {
-                        Log.w("ChatViewModel", "resolveReceiverId: convId contaminado " +
-                                "convId=$convId sender=$senderEmail → fallback=$originalChatId")
+                        Log.w(
+                            "ChatViewModel",
+                            "resolveReceiverId: convId contaminado " + "convId=$convId sender=$senderEmail → fallback=$originalChatId"
+                        )
                         originalChatId
                     }
                 }
@@ -353,15 +369,18 @@ class ChatViewModel(
         return try {
             val payload = token.split(".")[1]
             val decoded = android.util.Base64.decode(
-                payload.padEnd((payload.length + 3) / 4 * 4, '='),
-                android.util.Base64.URL_SAFE
+                payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
             )
             val json = String(decoded)
             val start = json.indexOf("\"sub\"") + 7
-            val end   = json.indexOf("\"", start)
+            val end = json.indexOf("\"", start)
             if (start > 6 && end > start) json.substring(start, end) else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    fun clearError() { _uiState.update { it.copy(error = null) } }
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
 }

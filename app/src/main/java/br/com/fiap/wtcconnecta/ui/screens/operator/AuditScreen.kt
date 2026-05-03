@@ -32,27 +32,31 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private val WtcBlue     = Color(0xFF0B537B)
+private val WtcBlue = Color(0xFF0B537B)
 private val WtcBlueSoft = Color(0xFF1A6E9A)
 private val WtcBlueDark = Color(0xFF063D5C)
 private val WtcBluePale = Color(0xFFEEF6FB)
 private val WtcBlueHint = Color(0xFFD0E8F2)
 private val TextPrimary = Color(0xFF0D2B3E)
-private val TextMuted   = Color(0xFF6E90A0)
+private val TextMuted = Color(0xFF6E90A0)
 
-// Cores semânticas dos ícones — mantidas intencionalmente
-private val ColorCreate   = Color(0xFF2E7D32)  // verde
-private val ColorUpdate   = Color(0xFFE65100)  // laranja
-private val ColorDelete   = Color(0xFFC62828)  // vermelho
+// Cores dos ícones
+private val ColorCreate = Color(0xFF2E7D32)  // verde
+private val ColorUpdate = Color(0xFFE65100)  // laranja
+private val ColorDelete = Color(0xFFC62828)  // vermelho
 private val ColorDispatch = Color(0xFF1565C0)  // azul
-private val ColorLogin    = Color(0xFF6A1B9A)  // roxo
+private val ColorLogin = Color(0xFF6A1B9A)  // roxo
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 
 data class AuditLogItem(
-    val id: String = "", val action: String = "", val entity: String = "",
-    val entityId: String = "", val performedBy: String = "",
-    val description: String = "", val timestamp: String = ""
+    val id: String = "",
+    val action: String = "",
+    val entity: String = "",
+    val entityId: String = "",
+    val performedBy: String = "",
+    val description: String = "",
+    val timestamp: String = ""
 )
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
@@ -85,15 +89,20 @@ class AuditViewModel : ViewModel() {
 
     fun setFilterAction(action: String?) = _uiState.update { it.copy(filterAction = action) }
     fun setFilterEntity(entity: String?) = _uiState.update { it.copy(filterEntity = entity) }
-    fun setFilterDate(date: String?)     = _uiState.update { it.copy(filterDate = date) }
-    fun toggleMineOnly()                 = _uiState.update { it.copy(showMineOnly = !it.showMineOnly) }
+    fun setFilterDate(date: String?) = _uiState.update { it.copy(filterDate = date) }
+    fun toggleMineOnly() = _uiState.update { it.copy(showMineOnly = !it.showMineOnly) }
 
     fun filteredLogs(currentUserEmail: String): List<AuditLogItem> {
         var result = _uiState.value.logs
-        if (_uiState.value.showMineOnly) result = result.filter { it.performedBy == currentUserEmail }
+        if (_uiState.value.showMineOnly) result =
+            result.filter { it.performedBy == currentUserEmail }
         _uiState.value.filterAction?.let { a -> result = result.filter { it.action == a } }
-        _uiState.value.filterEntity?.let { e -> result = result.filter { it.entity.equals(e, ignoreCase = true) } }
-        _uiState.value.filterDate?.let   { d -> result = result.filter { it.timestamp.startsWith(d) } }
+        _uiState.value.filterEntity?.let { e ->
+            result = result.filter { it.entity.equals(e, ignoreCase = true) }
+        }
+        _uiState.value.filterDate?.let { d ->
+            result = result.filter { it.timestamp.startsWith(d) }
+        }
         return result
     }
 }
@@ -103,11 +112,9 @@ class AuditViewModel : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuditScreen(
-    onBack: () -> Unit,
-    currentUserEmail: String = "",
-    viewModel: AuditViewModel = viewModel()
+    onBack: () -> Unit, currentUserEmail: String = "", viewModel: AuditViewModel = viewModel()
 ) {
-    val uiState           by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) { viewModel.loadLogs() }
@@ -115,16 +122,19 @@ fun AuditScreen(
         uiState.error?.let { snackbarHostState.showSnackbar(it) }
     }
 
-    val filteredLogs      = viewModel.filteredLogs(currentUserEmail)
+    val filteredLogs = viewModel.filteredLogs(currentUserEmail)
     val availableEntities = uiState.logs.map { it.entity }.distinct().sorted()
-    val availableActions  = uiState.logs.map { it.action }.distinct().sorted()
+    val availableActions = uiState.logs.map { it.action }.distinct().sorted()
 
 
     Scaffold(
-        snackbarHost    = { SnackbarHost(snackbarHostState) },
-        containerColor  = Color(0xFFF0F6FA)
+        snackbarHost = { SnackbarHost(snackbarHostState) }, containerColor = Color(0xFFF0F6FA)
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             // ── Header Hero ───────────────────────────────────────────────────
             Box(
@@ -134,16 +144,23 @@ fun AuditScreen(
                     .statusBarsPadding()
             ) {
                 Box(
-                    modifier = Modifier.size(180.dp).offset(x = 200.dp, y = (-30).dp)
-                        .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+                    modifier = Modifier
+                        .size(180.dp)
+                        .offset(x = 200.dp, y = (-30).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f))
                 )
                 Box(
-                    modifier = Modifier.size(110.dp).offset(x = 260.dp, y = 40.dp)
-                        .clip(CircleShape).background(Color.White.copy(alpha = 0.06f))
+                    modifier = Modifier
+                        .size(110.dp)
+                        .offset(x = 260.dp, y = 40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.06f))
                 )
 
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                         .padding(top = 16.dp, bottom = 24.dp)
                 ) {
@@ -153,31 +170,52 @@ fun AuditScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
-                            onClick  = onBack,
-                            modifier = Modifier.size(36.dp)
-                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                            onClick = onBack, modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp)
+                                )
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar",
-                                tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Voltar",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                         IconButton(
-                            onClick  = { viewModel.loadLogs() },
-                            modifier = Modifier.size(36.dp)
-                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                            onClick = { viewModel.loadLogs() },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp)
+                                )
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Atualizar",
-                                tint = Color.White, modifier = Modifier.size(18.dp))
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Atualizar",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("Auditoria", fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold, color = Color.White, lineHeight = 28.sp)
+                    Text(
+                        "Auditoria",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        lineHeight = 28.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Histórico de operações realizadas",
-                        fontSize = 13.sp, color = Color.White.copy(alpha = 0.65f),
-                        letterSpacing = 0.2.sp)
+                    Text(
+                        "Histórico de operações realizadas",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.65f),
+                        letterSpacing = 0.2.sp
+                    )
 
                     if (filteredLogs.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(14.dp))
@@ -190,13 +228,18 @@ fun AuditScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(Icons.Default.History, null,
+                                Icon(
+                                    Icons.Default.History,
+                                    null,
                                     tint = Color.White.copy(alpha = 0.85f),
-                                    modifier = Modifier.size(12.dp))
-                                Text("${filteredLogs.size} registro(s)",
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    "${filteredLogs.size} registro(s)",
                                     fontSize = 11.sp,
                                     color = Color.White.copy(alpha = 0.85f),
-                                    fontWeight = FontWeight.Medium)
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }
@@ -217,8 +260,13 @@ fun AuditScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("FILTROS", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                        color = TextMuted, letterSpacing = 1.2.sp)
+                    Text(
+                        "FILTROS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.2.sp
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Apenas meus", fontSize = 12.sp, color = TextMuted)
                         Spacer(modifier = Modifier.width(6.dp))
@@ -226,8 +274,9 @@ fun AuditScreen(
                             checked = uiState.showMineOnly,
                             onCheckedChange = { viewModel.toggleMineOnly() },
                             modifier = Modifier.height(24.dp),
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White,
-                                checkedTrackColor = WtcBlue)
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White, checkedTrackColor = WtcBlue
+                            )
                         )
                     }
                 }
@@ -248,16 +297,24 @@ fun AuditScreen(
                             viewModel.setFilterDate(null)
                         }
                     },
-                    placeholder = { Text("Filtrar por data: dd-mm-aaaa",
-                        color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp) },
+                    placeholder = {
+                        Text(
+                            "Filtrar por data: dd-mm-aaaa",
+                            color = TextMuted.copy(alpha = 0.6f),
+                            fontSize = 12.sp
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = TextStyle(fontSize = 13.sp),
                     shape = RoundedCornerShape(10.dp),
                     leadingIcon = {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null,
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = null,
                             tint = if (dateInputBr.isNotBlank()) WtcBlue else WtcBlueHint,
-                            modifier = Modifier.size(18.dp))
+                            modifier = Modifier.size(18.dp)
+                        )
                     },
                     trailingIcon = {
                         if (dateInputBr.isNotBlank()) {
@@ -265,13 +322,18 @@ fun AuditScreen(
                                 dateInputBr = ""
                                 viewModel.setFilterDate(null)
                             }, modifier = Modifier.size(20.dp)) {
-                                Icon(Icons.Default.Clear, contentDescription = "Limpar",
-                                    modifier = Modifier.size(16.dp), tint = TextMuted)
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = "Limpar",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = TextMuted
+                                )
                             }
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = WtcBlue, unfocusedBorderColor = WtcBlueHint,
+                        focusedBorderColor = WtcBlue,
+                        unfocusedBorderColor = WtcBlueHint,
                         cursorColor = WtcBlue,
                         focusedContainerColor = WtcBluePale.copy(alpha = 0.4f),
                         unfocusedContainerColor = Color(0xFFFAFCFE)
@@ -282,26 +344,35 @@ fun AuditScreen(
                 if (availableActions.isNotEmpty()) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         item {
-                            FilterChip(selected = uiState.filterAction == null,
+                            FilterChip(
+                                selected = uiState.filterAction == null,
                                 onClick = { viewModel.setFilterAction(null) },
                                 label = { Text("Todas", fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = WtcBlue,
-                                    selectedLabelColor     = Color.White))
+                                    selectedLabelColor = Color.White
+                                )
+                            )
                         }
                         items(availableActions) { action ->
                             val color = actionColorStatic(action)
                             FilterChip(
                                 selected = uiState.filterAction == action,
-                                onClick  = { viewModel.setFilterAction(if (uiState.filterAction == action) null else action) },
-                                label    = { Text(actionLabel(action), fontSize = 11.sp) },
-                                leadingIcon = { Icon(actionIcon(action), contentDescription = null,
-                                    modifier = Modifier.size(14.dp)) },
+                                onClick = { viewModel.setFilterAction(if (uiState.filterAction == action) null else action) },
+                                label = { Text(actionLabel(action), fontSize = 11.sp) },
+                                leadingIcon = {
+                                    Icon(
+                                        actionIcon(action),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = color.copy(alpha = 0.15f),
-                                    selectedLabelColor     = color,
-                                    containerColor         = WtcBluePale,
-                                    labelColor             = TextMuted)
+                                    selectedLabelColor = color,
+                                    containerColor = WtcBluePale,
+                                    labelColor = TextMuted
+                                )
                             )
                         }
                     }
@@ -311,23 +382,27 @@ fun AuditScreen(
                 if (availableEntities.isNotEmpty()) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         item {
-                            FilterChip(selected = uiState.filterEntity == null,
+                            FilterChip(
+                                selected = uiState.filterEntity == null,
                                 onClick = { viewModel.setFilterEntity(null) },
                                 label = { Text("Tudo", fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = WtcBlue,
-                                    selectedLabelColor     = Color.White))
+                                    selectedLabelColor = Color.White
+                                )
+                            )
                         }
                         items(availableEntities) { entity ->
                             FilterChip(
                                 selected = uiState.filterEntity == entity,
-                                onClick  = { viewModel.setFilterEntity(if (uiState.filterEntity == entity) null else entity) },
-                                label    = { Text(entityLabel(entity), fontSize = 11.sp) },
+                                onClick = { viewModel.setFilterEntity(if (uiState.filterEntity == entity) null else entity) },
+                                label = { Text(entityLabel(entity), fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = WtcBlue,
-                                    selectedLabelColor     = Color.White,
-                                    containerColor         = WtcBluePale,
-                                    labelColor             = TextMuted)
+                                    selectedLabelColor = Color.White,
+                                    containerColor = WtcBluePale,
+                                    labelColor = TextMuted
+                                )
                             )
                         }
                     }
@@ -341,24 +416,35 @@ fun AuditScreen(
                 uiState.isLoading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     CircularProgressIndicator(color = WtcBlue)
                 }
+
                 filteredLogs.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
-                            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp))
-                                .background(WtcBluePale),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(WtcBluePale), contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.History, contentDescription = null,
-                                modifier = Modifier.size(36.dp), tint = WtcBlue)
+                            Icon(
+                                Icons.Default.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = WtcBlue
+                            )
                         }
-                        Text("Nenhum registro encontrado.", color = TextPrimary,
-                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Nenhum registro encontrado.",
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                         Text("Tente ajustar os filtros.", color = TextMuted, fontSize = 13.sp)
                     }
                 }
+
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
@@ -379,14 +465,14 @@ fun AuditScreen(
 @Composable
 fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
     val actionColor = actionColorStatic(log.action)
-    val isMe        = log.performedBy == currentUserEmail
-    var showSheet   by remember { mutableStateOf(false) }
+    val isMe = log.performedBy == currentUserEmail
+    var showSheet by remember { mutableStateOf(false) }
 
     Card(
-        onClick   = { showSheet = true },
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = { showSheet = true },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
@@ -398,25 +484,41 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                     .background(actionColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(actionIcon(log.action), contentDescription = null,
-                    tint = actionColor, modifier = Modifier.size(20.dp))
+                Icon(
+                    actionIcon(log.action),
+                    contentDescription = null,
+                    tint = actionColor,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(modifier = Modifier.fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(entityLabel(log.entity), fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                            color = TextPrimary)
+                        Text(
+                            entityLabel(log.entity),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Surface(color = actionColor.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(6.dp)) {
-                            Text(actionLabel(log.action), fontSize = 10.sp,
-                                color = actionColor, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        Surface(
+                            color = actionColor.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                actionLabel(log.action),
+                                fontSize = 10.sp,
+                                color = actionColor,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
                     Text(formatTimestamp(log.timestamp), fontSize = 10.sp, color = TextMuted)
@@ -424,8 +526,14 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(log.description, fontSize = 12.sp, color = TextMuted,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                Text(
+                    log.description,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -435,9 +543,12 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Person, contentDescription = null,
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
                             modifier = Modifier.size(11.dp),
-                            tint = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.6f))
+                            tint = if (isMe) WtcBlue else TextMuted.copy(alpha = 0.6f)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             if (isMe) "Você (${log.performedBy})" else log.performedBy,
@@ -447,11 +558,18 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                         )
                     }
                     Box(
-                        modifier = Modifier.size(26.dp).clip(CircleShape).background(WtcBlueHint),
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(WtcBlueHint),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = null,
-                            tint = WtcBlueDark, modifier = Modifier.size(14.dp))
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = WtcBlueDark,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
             }
@@ -462,37 +580,56 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
     if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
-            containerColor   = Color.White,
-            shape            = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Título
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Box(
-                        modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(actionColor.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(actionIcon(log.action), contentDescription = null,
-                            tint = actionColor, modifier = Modifier.size(20.dp))
+                        Icon(
+                            actionIcon(log.action),
+                            contentDescription = null,
+                            tint = actionColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(entityLabel(log.entity), fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold, color = TextPrimary)
-                            Surface(color = actionColor.copy(alpha = 0.12f),
-                                shape = RoundedCornerShape(6.dp)) {
-                                Text(actionLabel(log.action), fontSize = 11.sp,
-                                    color = actionColor, fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                entityLabel(log.entity),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Surface(
+                                color = actionColor.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    actionLabel(log.action),
+                                    fontSize = 11.sp,
+                                    color = actionColor,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
                             }
                         }
                         Text(formatTimestamp(log.timestamp), fontSize = 11.sp, color = TextMuted)
@@ -502,16 +639,22 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
                 HorizontalDivider(color = Color(0xFFF0F6FA))
 
                 // Descrição completa
-                Text("Descrição", fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold, color = TextMuted)
-                Text(log.description, fontSize = 14.sp,
-                    color = TextPrimary, lineHeight = 20.sp)
+                Text(
+                    "Descrição",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMuted
+                )
+                Text(
+                    log.description, fontSize = 14.sp, color = TextPrimary, lineHeight = 20.sp
+                )
 
                 HorizontalDivider(color = Color(0xFFF0F6FA))
 
                 // Detalhes
-                DetailRow(label = "Operador", value = log.performedBy,
-                    highlight = isMe)
+                DetailRow(
+                    label = "Operador", value = log.performedBy, highlight = isMe
+                )
                 if (log.entityId.isNotBlank()) {
                     DetailRow(label = "ID do registro", value = log.entityId)
                 }
@@ -522,44 +665,49 @@ fun AuditLogCard(log: AuditLogItem, currentUserEmail: String) {
 
 @Composable
 private fun DetailRow(label: String, value: String, highlight: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth(),
+    Row(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(label, fontSize = 12.sp, color = TextMuted)
-        Text(value, fontSize = 12.sp,
+        Text(
+            value,
+            fontSize = 12.sp,
             color = if (highlight) WtcBlue else TextPrimary,
-            fontWeight = if (highlight) FontWeight.SemiBold else FontWeight.Normal)
+            fontWeight = if (highlight) FontWeight.SemiBold else FontWeight.Normal
+        )
     }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fun entityLabel(entity: String) = when (entity.lowercase()) {
-    "campaign"           -> "Campanha"
+    "campaign" -> "Campanha"
     "groupchangerequest" -> "Mudança de Grupo"
-    "note"               -> "Anotação"
-    "user"               -> "Usuário"
-    "message"            -> "Mensagem"
-    else                 -> entity
+    "note" -> "Anotação"
+    "user" -> "Usuário"
+    "message" -> "Mensagem"
+    else -> entity
 }
 
 fun actionLabel(action: String) = when (action) {
-    "CREATE"   -> "Criação"
-    "UPDATE"   -> "Edição"
-    "DELETE"   -> "Exclusão"
+    "CREATE" -> "Criação"
+    "UPDATE" -> "Edição"
+    "DELETE" -> "Exclusão"
     "DISPATCH" -> "Disparo"
-    "LOGIN"    -> "Login"
-    else       -> action
+    "LOGIN" -> "Login"
+    else -> action
 }
 
 // Versão sem @Composable — usada em FilterChip e Card
 fun actionColorStatic(action: String): Color = when (action) {
-    "CREATE"   -> ColorCreate
-    "UPDATE"   -> ColorUpdate
-    "DELETE"   -> ColorDelete
+    "CREATE" -> ColorCreate
+    "UPDATE" -> ColorUpdate
+    "DELETE" -> ColorDelete
     "DISPATCH" -> ColorDispatch
-    "LOGIN"    -> ColorLogin
-    else       -> Color(0xFF6E90A0)
+    "LOGIN" -> ColorLogin
+    else -> Color(0xFF6E90A0)
 }
 
 // Versão @Composable mantida por compatibilidade com código existente
@@ -567,12 +715,12 @@ fun actionColorStatic(action: String): Color = when (action) {
 fun actionColor(action: String) = actionColorStatic(action)
 
 fun actionIcon(action: String): ImageVector = when (action) {
-    "CREATE"   -> Icons.Default.Add
-    "UPDATE"   -> Icons.Default.Edit
-    "DELETE"   -> Icons.Default.Delete
+    "CREATE" -> Icons.Default.Add
+    "UPDATE" -> Icons.Default.Edit
+    "DELETE" -> Icons.Default.Delete
     "DISPATCH" -> Icons.Default.Send
-    "LOGIN"    -> Icons.Default.Login
-    else       -> Icons.Default.Info
+    "LOGIN" -> Icons.Default.Login
+    else -> Icons.Default.Info
 }
 
 fun formatTimestamp(timestamp: String?): String {
@@ -581,5 +729,7 @@ fun formatTimestamp(timestamp: String?): String {
         val date = timestamp.take(10).split("-")  // [2026, 04, 08]
         val time = timestamp.drop(11).take(5)     // 02:41
         "${date[2]}-${date[1]}-${date[0]} às $time"
-    } catch (e: Exception) { timestamp }
+    } catch (e: Exception) {
+        timestamp
+    }
 }

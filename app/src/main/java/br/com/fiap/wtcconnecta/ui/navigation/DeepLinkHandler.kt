@@ -19,8 +19,8 @@ object DeepLinkHandler {
     fun handle(url: String, navController: NavController, clientId: String = ""): Boolean {
         if (!url.startsWith("wtcconnecta://")) return false
 
-        val uri    = android.net.Uri.parse(url)
-        val host   = uri.host ?: return false
+        val uri = android.net.Uri.parse(url)
+        val host = uri.host ?: return false
         val paramClientId = uri.getQueryParameter("clientId") ?: clientId
 
         return when (host) {
@@ -28,19 +28,26 @@ object DeepLinkHandler {
                 navController.navigate(Routes.ConversationList.createRoute(paramClientId))
                 true
             }
+
             "campaigns" -> {
                 navController.navigate(Routes.CampaignExpress.route)
                 true
             }
+
             "profile" -> {
-                if (paramClientId.isNotBlank())
-                    navController.navigate(Routes.Profile.createRoute(paramClientId))
+                if (paramClientId.isNotBlank()) navController.navigate(
+                    Routes.Profile.createRoute(
+                        paramClientId
+                    )
+                )
                 true
             }
+
             "kanban" -> {
                 navController.navigate(Routes.Kanban.route)
                 true
             }
+
             else -> false
         }
     }

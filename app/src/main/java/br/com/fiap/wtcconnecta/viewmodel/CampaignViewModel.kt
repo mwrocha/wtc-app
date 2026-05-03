@@ -36,17 +36,17 @@ class CampaignViewModel(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val campaigns = safeCall { repository.getCampaigns() } ?: emptyList()
-                val groups    = safeCall { repository.getGroups() } ?: emptyList()
+                val groups = safeCall { repository.getGroups() } ?: emptyList()
                 val divisions = safeCall { repository.getDivisions() } ?: emptyList()
-                val clients   = safeCall { repository.getClients() } ?: emptyList()
-                val tags      = clients.flatMap { it.tags.orEmpty() }.distinct().sorted()
+                val clients = safeCall { repository.getClients() } ?: emptyList()
+                val tags = clients.flatMap { it.tags.orEmpty() }.distinct().sorted()
 
                 _uiState.update {
                     it.copy(
-                        isLoading     = false,
-                        campaigns     = campaigns,
-                        groups        = groups,
-                        divisions     = divisions,
+                        isLoading = false,
+                        campaigns = campaigns,
+                        groups = groups,
+                        divisions = divisions,
                         availableTags = tags
                     )
                 }
@@ -79,28 +79,39 @@ class CampaignViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val request = CampaignRequest(
-                    title            = title,
-                    body             = body,
-                    url              = url.takeIf { !it.isNullOrBlank() },
-                    actions          = actions.takeIf { it.isNotEmpty() },
-                    actionUrls       = actionUrls.takeIf { it.isNotEmpty() },
-                    targetGroupId    = targetGroupId,
+                    title = title,
+                    body = body,
+                    url = url.takeIf { !it.isNullOrBlank() },
+                    actions = actions.takeIf { it.isNotEmpty() },
+                    actionUrls = actionUrls.takeIf { it.isNotEmpty() },
+                    targetGroupId = targetGroupId,
                     targetDivisionId = targetDivisionId,
-                    targetTags       = targetTags.takeIf { it.isNotEmpty() }
-                )
+                    targetTags = targetTags.takeIf { it.isNotEmpty() })
 
                 val created = safeCall { repository.createCampaign(request) }
                 if (created == null) {
-                    _uiState.update { it.copy(isLoading = false, error = "Falha ao criar campanha.") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, error = "Falha ao criar campanha."
+                        )
+                    }
                     return@launch
                 }
 
                 val dispatched = safeCall { repository.dispatchCampaign(created.id) }
                 if (dispatched != null) {
-                    _uiState.update { it.copy(isLoading = false, successMessage = "Campanha enviada com sucesso!") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, successMessage = "Campanha enviada com sucesso!"
+                        )
+                    }
                     loadData()
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Campanha criada mas falha ao disparar.") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, error = "Campanha criada mas falha ao disparar."
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("CampaignVM", "Erro: ${e.message}")
@@ -114,7 +125,11 @@ class CampaignViewModel(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 safeCall { repository.dispatchCampaign(campaignId) }
-                _uiState.update { it.copy(isLoading = false, successMessage = "Campanha disparada!") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, successMessage = "Campanha disparada!"
+                    )
+                }
                 loadData()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao disparar campanha.") }
@@ -134,7 +149,9 @@ class CampaignViewModel(
         }
     }
 
-    fun clearMessages() { _uiState.update { it.copy(error = null, successMessage = null) } }
+    fun clearMessages() {
+        _uiState.update { it.copy(error = null, successMessage = null) }
+    }
 
     private suspend fun <T> safeCall(block: suspend () -> T): T? = try {
         block()

@@ -31,8 +31,12 @@ class GroupManagementViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val divisions = repository.getDivisions()
-                val groups    = repository.getGroups()
-                _uiState.update { it.copy(divisions = divisions, groups = groups, isLoading = false) }
+                val groups = repository.getGroups()
+                _uiState.update {
+                    it.copy(
+                        divisions = divisions, groups = groups, isLoading = false
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar dados.") }
             }
@@ -47,7 +51,7 @@ class GroupManagementViewModel(
                 val created = repository.createDivision(name)
                 _uiState.update { state ->
                     state.copy(
-                        divisions      = state.divisions + created,
+                        divisions = state.divisions + created,
                         successMessage = "Divisão \"${created.name}\" criada!"
                     )
                 }
@@ -63,7 +67,7 @@ class GroupManagementViewModel(
                 val updated = repository.updateDivision(id, name)
                 _uiState.update { state ->
                     state.copy(
-                        divisions      = state.divisions.map { if (it.id == id) updated else it },
+                        divisions = state.divisions.map { if (it.id == id) updated else it },
                         successMessage = "Divisão atualizada!"
                     )
                 }
@@ -79,8 +83,8 @@ class GroupManagementViewModel(
                 repository.deleteDivision(id)
                 _uiState.update { state ->
                     state.copy(
-                        divisions      = state.divisions.filter { it.id != id },
-                        groups         = state.groups.filter { it.divisionId != id },
+                        divisions = state.divisions.filter { it.id != id },
+                        groups = state.groups.filter { it.divisionId != id },
                         successMessage = "Divisão removida."
                     )
                 }
@@ -98,7 +102,7 @@ class GroupManagementViewModel(
                 val created = repository.createGroup(name, divisionId)
                 _uiState.update { state ->
                     state.copy(
-                        groups         = state.groups + created,
+                        groups = state.groups + created,
                         successMessage = "Grupo \"${created.name}\" criado!"
                     )
                 }
@@ -114,7 +118,7 @@ class GroupManagementViewModel(
                 val updated = repository.updateGroup(id, name, divisionId)
                 _uiState.update { state ->
                     state.copy(
-                        groups         = state.groups.map { if (it.id == id) updated else it },
+                        groups = state.groups.map { if (it.id == id) updated else it },
                         successMessage = "Grupo atualizado!"
                     )
                 }
@@ -130,7 +134,7 @@ class GroupManagementViewModel(
                 repository.deleteGroup(id)
                 _uiState.update { state ->
                     state.copy(
-                        groups         = state.groups.filter { it.id != id },
+                        groups = state.groups.filter { it.id != id },
                         successMessage = "Grupo removido."
                     )
                 }

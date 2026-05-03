@@ -27,19 +27,19 @@ import br.com.fiap.wtcconnecta.viewmodel.ProfileViewModel
 import coil.compose.AsyncImage
 import java.util.Calendar
 
-private val WtcBlue       = Color(0xFF0B537B)
-private val WtcBlueSoft   = Color(0xFF1A6E9A)
-private val WtcBluePale   = Color(0xFFEEF6FB)
-private val WtcBlueHint   = Color(0xFFD0E8F2)
-private val WtcBlueDark   = Color(0xFF063D5C)
-private val TextPrimary   = Color(0xFF0D2B3E)
-private val TextMuted     = Color(0xFF6E90A0)
+private val WtcBlue = Color(0xFF0B537B)
+private val WtcBlueSoft = Color(0xFF1A6E9A)
+private val WtcBluePale = Color(0xFFEEF6FB)
+private val WtcBlueHint = Color(0xFFD0E8F2)
+private val WtcBlueDark = Color(0xFF063D5C)
+private val TextPrimary = Color(0xFF0D2B3E)
+private val TextMuted = Color(0xFF6E90A0)
 
 private fun greetingByHour(): String {
     return when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-        in 0..11  -> "Bom dia"
+        in 0..11 -> "Bom dia"
         in 12..17 -> "Boa tarde"
-        else      -> "Boa noite"
+        else -> "Boa noite"
     }
 }
 
@@ -57,10 +57,10 @@ fun HomeClientScreen(
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var unreadCount         by remember { mutableIntStateOf(0) }
+    var unreadCount by remember { mutableIntStateOf(0) }
     var unreadCampaignCount by remember { mutableIntStateOf(0) }
-    val profileUiState   by profileViewModel.uiState.collectAsState()
-    val avatarUrl        = profileUiState.avatarUrl
+    val profileUiState by profileViewModel.uiState.collectAsState()
+    val avatarUrl = profileUiState.avatarUrl
 
     val displayName = remember(profileUiState.client, clientName) {
         profileUiState.client?.name?.takeIf { it.isNotBlank() } ?: clientName
@@ -68,7 +68,7 @@ fun HomeClientScreen(
 
     val nameParts = remember(displayName) { displayName.trim().split(" ") }
     val firstName = remember(nameParts) { nameParts.firstOrNull() ?: "" }
-    val lastName  = remember(nameParts) {
+    val lastName = remember(nameParts) {
         if (nameParts.size > 1) nameParts.drop(1).joinToString(" ") else ""
     }
 
@@ -80,11 +80,13 @@ fun HomeClientScreen(
             try {
                 val resp = RetrofitClient.instance.getUnreadCount()
                 unreadCount = resp.count
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
                 val resp = RetrofitClient.instance.getUnreadCampaignCount()
                 unreadCampaignCount = resp.count
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             kotlinx.coroutines.delay(30_000)
         }
     }
@@ -137,19 +139,22 @@ fun HomeClientScreen(
                     ) {
                         Text(
                             greetingByHour(),
-                            fontSize     = 13.sp,
-                            color        = Color.White.copy(alpha = 0.70f),
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.70f),
                             letterSpacing = 0.5.sp
                         )
                         IconButton(
-                            onClick  = { showLogoutDialog = true },
+                            onClick = { showLogoutDialog = true },
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(Color.White.copy(alpha = 0.12f), CircleShape)
                         ) {
-                            Icon(Icons.Default.Logout, contentDescription = "Sair",
-                                tint     = Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.size(17.dp))
+                            Icon(
+                                Icons.Default.Logout,
+                                contentDescription = "Sair",
+                                tint = Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(17.dp)
+                            )
                         }
                     }
 
@@ -166,19 +171,20 @@ fun HomeClientScreen(
                         ) {
                             if (!avatarUrl.isNullOrBlank() && avatarUrl.startsWith("http")) {
                                 AsyncImage(
-                                    model              = avatarUrl,
+                                    model = avatarUrl,
                                     contentDescription = "Foto de perfil",
-                                    contentScale       = ContentScale.Crop,
-                                    modifier           = Modifier
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
                                         .size(72.dp)
                                         .clip(CircleShape)
                                 )
                             } else {
                                 Text(
-                                    text = displayName.firstOrNull()?.uppercase() ?: firstName.firstOrNull()?.uppercase() ?: "?",
-                                    fontSize   = 26.sp,
+                                    text = displayName.firstOrNull()?.uppercase()
+                                        ?: firstName.firstOrNull()?.uppercase() ?: "?",
+                                    fontSize = 26.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color      = Color.White
+                                    color = Color.White
                                 )
                             }
                         }
@@ -188,16 +194,16 @@ fun HomeClientScreen(
                         Column {
                             Text(
                                 if (firstName.isNotBlank()) firstName else "Cliente",
-                                fontSize   = 26.sp,
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Bold,
-                                color      = Color.White,
+                                color = Color.White,
                                 lineHeight = 30.sp
                             )
                             if (lastName.isNotBlank()) {
                                 Text(
                                     lastName,
                                     fontSize = 15.sp,
-                                    color    = Color.White.copy(alpha = 0.70f)
+                                    color = Color.White.copy(alpha = 0.70f)
                                 )
                             }
                         }
@@ -216,8 +222,8 @@ fun HomeClientScreen(
 
                     Text(
                         "Conectando você ao que importa",
-                        fontSize     = 12.sp,
-                        color        = Color.White.copy(alpha = 0.55f),
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.55f),
                         letterSpacing = 0.3.sp
                     )
                 }
@@ -233,21 +239,21 @@ fun HomeClientScreen(
             ) {
                 Text(
                     "ACESSO RÁPIDO",
-                    fontSize     = 11.sp,
-                    fontWeight   = FontWeight.Bold,
-                    color        = TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextMuted,
                     letterSpacing = 1.2.sp,
-                    modifier     = Modifier.padding(bottom = 2.dp)
+                    modifier = Modifier.padding(bottom = 2.dp)
                 )
 
                 // Card principal — Conversas (destaque)
                 PrimaryNavCard(
-                    title       = "Minhas Conversas",
-                    subtitle    = "Chats 1:1 e mensagens de grupo",
-                    icon        = Icons.Default.Chat,
-                    gradient    = Brush.linearGradient(listOf(WtcBlue, WtcBlueSoft)),
-                    onClick     = onNavigateToConversationList,
-                    badgeCount  = unreadCount
+                    title = "Minhas Conversas",
+                    subtitle = "Chats 1:1 e mensagens de grupo",
+                    icon = Icons.Default.Chat,
+                    gradient = Brush.linearGradient(listOf(WtcBlue, WtcBlueSoft)),
+                    onClick = onNavigateToConversationList,
+                    badgeCount = unreadCount
                 )
 
                 // Cards secundários lado a lado
@@ -256,54 +262,56 @@ fun HomeClientScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     SecondaryNavCard(
-                        title      = "Campanhas",
-                        subtitle   = "Ofertas\nexclusivas",
-                        icon       = Icons.Default.Campaign,
-                        accent     = WtcBlueSoft,
-                        bgAccent   = Color(0xFFDEEFF7),
-                        onClick    = onNavigateToCampaigns,
-                        modifier   = Modifier.weight(1f),
+                        title = "Campanhas",
+                        subtitle = "Ofertas\nexclusivas",
+                        icon = Icons.Default.Campaign,
+                        accent = WtcBlueSoft,
+                        bgAccent = Color(0xFFDEEFF7),
+                        onClick = onNavigateToCampaigns,
+                        modifier = Modifier.weight(1f),
                         badgeCount = unreadCampaignCount
                     )
                     SecondaryNavCard(
-                        title    = "Meu Perfil",
+                        title = "Meu Perfil",
                         subtitle = "Dados e\nconfigurações",
-                        icon     = Icons.Default.Person,
-                        accent   = WtcBlueDark,
+                        icon = Icons.Default.Person,
+                        accent = WtcBlueDark,
                         bgAccent = WtcBlueHint,
-                        onClick  = onNavigateToProfile,
+                        onClick = onNavigateToProfile,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 // ── Card Meus Atendimentos ────────────────────────────────────
                 ClientNavCard(
-                    title    = "Meus Atendimentos",
+                    title = "Meus Atendimentos",
                     subtitle = "Histórico de atendimentos encerrados",
-                    icon     = Icons.Default.HeadsetMic,
-                    accent   = Color(0xFF1A7A5E),
+                    icon = Icons.Default.HeadsetMic,
+                    accent = Color(0xFF1A7A5E),
                     bgAccent = Color(0xFFEDF7F2),
-                    onClick  = onNavigateToHistory
+                    onClick = onNavigateToHistory
                 )
 
                 // ── Card Galeria ──────────────────────────────────────────────
                 ClientNavCard(
-                    title    = "Galeria",
+                    title = "Galeria",
                     subtitle = "Imagens e documentos trocados",
-                    icon     = Icons.Default.PhotoLibrary,
-                    accent   = WtcBlue,
+                    icon = Icons.Default.PhotoLibrary,
+                    accent = WtcBlue,
                     bgAccent = WtcBluePale,
-                    onClick  = onNavigateToGallery
+                    onClick = onNavigateToGallery
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     "WTC Connecta • Sua conexão com o mundo corporativo",
-                    fontSize  = 11.sp,
-                    color     = TextMuted.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    color = TextMuted.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
                 )
             }
         }
@@ -314,20 +322,19 @@ fun HomeClientScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text("Sair da conta", fontWeight = FontWeight.Bold, color = TextPrimary) },
-            text  = { Text("Tem certeza que deseja sair?", color = TextMuted) },
+            text = { Text("Tem certeza que deseja sair?", color = TextMuted) },
             confirmButton = {
                 Button(
                     onClick = { showLogoutDialog = false; onLogout() },
-                    colors  = ButtonDefaults.buttonColors(containerColor = WtcBlue),
-                    shape   = RoundedCornerShape(10.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = WtcBlue),
+                    shape = RoundedCornerShape(10.dp)
                 ) { Text("Sair", fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
                     Text("Cancelar", color = TextMuted)
                 }
-            }
-        )
+            })
     }
 }
 
@@ -335,16 +342,19 @@ fun HomeClientScreen(
 
 @Composable
 fun PrimaryNavCard(
-    title: String, subtitle: String, icon: ImageVector,
-    gradient: Brush, onClick: () -> Unit,
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    gradient: Brush,
+    onClick: () -> Unit,
     badgeCount: Int = 0
 ) {
     Card(
-        onClick   = onClick,
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(20.dp),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
@@ -368,14 +378,22 @@ fun PrimaryNavCard(
                         .background(Color.White.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null,
-                        tint = Color.White, modifier = Modifier.size(26.dp))
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text(subtitle, fontSize = 12.sp, color = Color.White.copy(alpha = 0.72f),
-                        modifier = Modifier.padding(top = 2.dp))
+                    Text(
+                        subtitle,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.72f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
                 }
                 // Badge de não lidas
                 if (badgeCount > 0) {
@@ -383,19 +401,22 @@ fun PrimaryNavCard(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE53935)),
-                        contentAlignment = Alignment.Center
+                            .background(Color(0xFFE53935)), contentAlignment = Alignment.Center
                     ) {
                         Text(
                             if (badgeCount > 99) "99+" else badgeCount.toString(),
-                            fontSize   = 11.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.White
+                            color = Color.White
                         )
                     }
                 } else {
-                    Icon(Icons.Default.ArrowForward, contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -406,16 +427,20 @@ fun PrimaryNavCard(
 
 @Composable
 fun SecondaryNavCard(
-    title: String, subtitle: String, icon: ImageVector,
-    accent: Color, bgAccent: Color, onClick: () -> Unit,
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    bgAccent: Color,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     badgeCount: Int = 0
 ) {
     Card(
-        onClick   = onClick,
-        modifier  = modifier,
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -429,10 +454,14 @@ fun SecondaryNavCard(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(RoundedCornerShape(13.dp))
-                        .background(bgAccent),
-                    contentAlignment = Alignment.Center
+                        .background(bgAccent), contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
                 if (badgeCount > 0) {
                     Box(
@@ -445,25 +474,37 @@ fun SecondaryNavCard(
                     ) {
                         Text(
                             if (badgeCount > 99) "99+" else badgeCount.toString(),
-                            fontSize   = 10.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.White
+                            color = Color.White
                         )
                     }
                 }
             }
             Column {
                 Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(subtitle, fontSize = 11.sp, color = TextMuted,
-                    lineHeight = 15.sp, modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    subtitle,
+                    fontSize = 11.sp,
+                    color = TextMuted,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Box(
-                    modifier = Modifier.size(24.dp).clip(CircleShape).background(bgAccent),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(bgAccent),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = null,
-                        tint = accent, modifier = Modifier.size(14.dp))
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
             }
         }
@@ -474,31 +515,59 @@ fun SecondaryNavCard(
 
 @Composable
 fun ClientNavCard(
-    title: String, subtitle: String, icon: ImageVector,
-    accent: Color, bgAccent: Color, onClick: () -> Unit
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    bgAccent: Color,
+    onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick, modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(bgAccent),
-                contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(bgAccent), contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(subtitle, fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    subtitle,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
-            Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(bgAccent),
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(bgAccent),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

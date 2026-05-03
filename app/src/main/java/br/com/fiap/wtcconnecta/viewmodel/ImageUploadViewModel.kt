@@ -47,21 +47,24 @@ class ImageUploadViewModel : ViewModel() {
 
                 val extension = when (mimeType) {
                     "application/pdf" -> "pdf"
-                    "image/png"       -> "png"
-                    "image/gif"       -> "gif"
-                    "image/webp"      -> "webp"
-                    else              -> "jpg"
+                    "image/png" -> "png"
+                    "image/gif" -> "gif"
+                    "image/webp" -> "webp"
+                    else -> "jpg"
                 }
 
                 // Tenta obter o nome do arquivo original
                 val fileName = try {
                     val cursor = context.contentResolver.query(uri, null, null, null, null)
                     cursor?.use {
-                        val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val nameIndex =
+                            it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                         it.moveToFirst()
                         if (nameIndex >= 0) it.getString(nameIndex) else "arquivo.$extension"
                     } ?: "arquivo.$extension"
-                } catch (_: Exception) { "arquivo.$extension" }
+                } catch (_: Exception) {
+                    "arquivo.$extension"
+                }
 
                 val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
                 val part = MultipartBody.Part.createFormData("file", fileName, requestBody)
@@ -74,15 +77,15 @@ class ImageUploadViewModel : ViewModel() {
                             isUploading = false,
                             uploadedUrl = body.url,
                             uploadedKey = body.objectKey,
-                            isPdf       = isPdf,
-                            fileName    = fileName
+                            isPdf = isPdf,
+                            fileName = fileName
                         )
                     }
                     onSuccess(body.url, body.objectKey)
                 } else {
                     val msg = when (response.code()) {
-                        400  -> "Tipo ou tamanho de arquivo inválido."
-                        413  -> "Arquivo muito grande (máx 10 MB)."
+                        400 -> "Tipo ou tamanho de arquivo inválido."
+                        413 -> "Arquivo muito grande (máx 10 MB)."
                         else -> "Erro ao fazer upload (${response.code()})."
                     }
                     _uiState.update { it.copy(isUploading = false, error = msg) }
@@ -100,5 +103,5 @@ class ImageUploadViewModel : ViewModel() {
     }
 
     fun clearError() = _uiState.update { it.copy(error = null) }
-    fun reset()      = _uiState.update { ImageUploadUiState() }
+    fun reset() = _uiState.update { ImageUploadUiState() }
 }

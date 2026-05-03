@@ -31,12 +31,13 @@ data class ClientDetailUiState(
     val attendanceClosed: Boolean = false
 )
 
-class ClientDetailViewModel(private val repository: AuthRepository = AuthRepository()) : ViewModel() {
+class ClientDetailViewModel(private val repository: AuthRepository = AuthRepository()) :
+    ViewModel() {
 
     private val slashCommands = mapOf(
         "/agradecer" to "O WTC Connecta agradece seu contato! Estamos à disposição.",
-        "/promo"     to "Temos uma promoção especial para você! 10% de desconto em todos os serviços esta semana.",
-        "/boleto"    to "Claro! Estou gerando a segunda via do seu boleto e enviarei em instantes."
+        "/promo" to "Temos uma promoção especial para você! 10% de desconto em todos os serviços esta semana.",
+        "/boleto" to "Claro! Estou gerando a segunda via do seu boleto e enviarei em instantes."
     )
 
     private val _uiState = MutableStateFlow(ClientDetailUiState())
@@ -52,8 +53,7 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         return try {
             val payload = token.split(".")[1]
             val decoded = android.util.Base64.decode(
-                payload.padEnd((payload.length + 3) / 4 * 4, '='),
-                android.util.Base64.URL_SAFE
+                payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
             )
             val json = String(decoded)
             val subRegex = Regex("\"sub\"\\s*:\\s*\"([^\"]+)\"")
@@ -72,29 +72,38 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
                 val operatorEmail = getOperatorEmail()
                 val client = safeApiCall { repository.getClientById(clientId) }
                 val clientEmail = client?.email ?: clientId
-                val conversationId = if (operatorEmail != null)
-                    buildConversationId(clientEmail, operatorEmail)
-                else clientId
+                val conversationId =
+                    if (operatorEmail != null) buildConversationId(clientEmail, operatorEmail)
+                    else clientId
 
-                val conversationDeferred = async { safeApiCall { repository.getConversation(conversationId) } }
-                val notesDeferred        = async { safeApiCall { repository.getNotesForClient(clientId) } }
-                val divisionsDeferred    = async { safeApiCall { repository.getDivisions() } }
-                val groupsDeferred       = async { safeApiCall { repository.getGroups() } }
-                val campaignsDeferred    = async { safeApiCall { repository.getCampaignsForClient(clientId) } }
+                val conversationDeferred =
+                    async { safeApiCall { repository.getConversation(conversationId) } }
+                val notesDeferred = async { safeApiCall { repository.getNotesForClient(clientId) } }
+                val divisionsDeferred = async { safeApiCall { repository.getDivisions() } }
+                val groupsDeferred = async { safeApiCall { repository.getGroups() } }
+                val campaignsDeferred =
+                    async { safeApiCall { repository.getCampaignsForClient(clientId) } }
 
                 val conversation = conversationDeferred.await() ?: emptyList()
-                val notes        = notesDeferred.await() ?: emptyList()
-                val divisions    = divisionsDeferred.await() ?: emptyList()
-                val groups       = groupsDeferred.await() ?: emptyList()
-                val campaigns    = campaignsDeferred.await() ?: emptyList()
+                val notes = notesDeferred.await() ?: emptyList()
+                val divisions = divisionsDeferred.await() ?: emptyList()
+                val groups = groupsDeferred.await() ?: emptyList()
+                val campaigns = campaignsDeferred.await() ?: emptyList()
 
                 Log.d("MSG_DEBUG", "Total mensagens: ${conversation.size}")
                 conversation.take(3).forEach { msg ->
-                    Log.d("MSG_DEBUG", "id=${msg.id} body=${msg.body} contentRaw=${msg.contentRaw} display=${msg.displayContent}")
+                    Log.d(
+                        "MSG_DEBUG",
+                        "id=${msg.id} body=${msg.body} contentRaw=${msg.contentRaw} display=${msg.displayContent}"
+                    )
                 }
 
                 if (client == null) {
-                    _uiState.update { it.copy(isLoading = false, error = "Cliente não encontrado.") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, error = "Cliente não encontrado."
+                        )
+                    }
                     return@launch
                 }
 
@@ -102,13 +111,13 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
 
                 _uiState.update {
                     it.copy(
-                        isLoading   = false,
-                        client      = client,
-                        notes       = notes,
-                        messages    = conversation,
-                        campaigns   = campaigns,
-                        divisions   = divisions,
-                        groups      = groups,
+                        isLoading = false,
+                        client = client,
+                        notes = notes,
+                        messages = conversation,
+                        campaigns = campaigns,
+                        divisions = divisions,
+                        groups = groups,
                         senderNames = it.senderNames + newNames
                     )
                 }
@@ -119,7 +128,11 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
 
             } catch (e: Exception) {
                 Log.e("ClientDetailVM", "Erro ao buscar detalhes: ${e.message}", e)
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao carregar detalhes do cliente.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, error = "Erro ao carregar detalhes do cliente."
+                    )
+                }
             }
         }
     }
@@ -153,15 +166,15 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
     private suspend fun refreshMessages(clientId: String) {
         try {
             val operatorEmail = getOperatorEmail()
-            val client  = _uiState.value.client ?: return
-            val conversationId = if (operatorEmail != null)
-                buildConversationId(client.email, operatorEmail)
-            else clientId
+            val client = _uiState.value.client ?: return
+            val conversationId =
+                if (operatorEmail != null) buildConversationId(client.email, operatorEmail)
+                else clientId
 
             val updated = safeApiCall { repository.getConversation(conversationId) } ?: return
-            val knownIds   = _uiState.value.senderNames.keys
+            val knownIds = _uiState.value.senderNames.keys
             val newSenders = updated.map { it.senderId }.filter { it !in knownIds }.distinct()
-            val newNames   = mutableMapOf<String, String>()
+            val newNames = mutableMapOf<String, String>()
             for (senderId in newSenders) {
                 val user = safeApiCall { repository.getUserByEmail(senderId) }
                 if (user != null) newNames[senderId] = user.name
@@ -174,8 +187,10 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    private suspend fun resolveSenderNames(conversation: List<Message>, client: Client): Map<String, String> {
-        val names   = mutableMapOf<String, String>()
+    private suspend fun resolveSenderNames(
+        conversation: List<Message>, client: Client
+    ): Map<String, String> {
+        val names = mutableMapOf<String, String>()
         val senders = conversation.map { it.senderId }.filter { it.isNotBlank() }.distinct()
         for (senderId in senders) {
             try {
@@ -193,8 +208,12 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             try {
-                val updated = client.copy(divisionId = divisionId, groupId = groupId,
-                    tags = tags, noteIds = client.noteIds.orEmpty())
+                val updated = client.copy(
+                    divisionId = divisionId,
+                    groupId = groupId,
+                    tags = tags,
+                    noteIds = client.noteIds.orEmpty()
+                )
                 repository.updateClient(client.id, updated)
                 _uiState.update { it.copy(client = updated) }
             } catch (e: Exception) {
@@ -219,7 +238,8 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
     fun updateNote(note: Note, newText: String, clientId: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.instance.updateNote(note.id, mapOf("content" to newText))
+                val response =
+                    RetrofitClient.instance.updateNote(note.id, mapOf("content" to newText))
                 if (response.isSuccessful) {
                     _uiState.update { state ->
                         state.copy(notes = state.notes.map {
@@ -261,12 +281,13 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
             try {
                 val success = repository.sendMessage(receiverId = clientId, content = content)
                 if (success) {
-                    val operatorEmail  = getOperatorEmail()
-                    val clientEmail    = _uiState.value.client?.email ?: clientId
-                    val conversationId = if (operatorEmail != null)
-                        buildConversationId(clientEmail, operatorEmail)
-                    else clientId
-                    val updated = safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
+                    val operatorEmail = getOperatorEmail()
+                    val clientEmail = _uiState.value.client?.email ?: clientId
+                    val conversationId =
+                        if (operatorEmail != null) buildConversationId(clientEmail, operatorEmail)
+                        else clientId
+                    val updated =
+                        safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
                     _uiState.update { it.copy(messages = updated) }
                 } else {
                     _uiState.update { it.copy(error = "Falha ao enviar mensagem.") }
@@ -280,17 +301,18 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
     fun closeAttendance(clientId: String) {
         viewModelScope.launch {
             try {
-                val operatorEmail  = getOperatorEmail() ?: return@launch
-                val clientEmail    = _uiState.value.client?.email ?: clientId
+                val operatorEmail = getOperatorEmail() ?: return@launch
+                val clientEmail = _uiState.value.client?.email ?: clientId
                 val conversationId = buildConversationId(clientEmail, operatorEmail)
 
                 RetrofitClient.instance.closeConversation(conversationId)
 
-                val farewell = "✅ Atendimento encerrado. Obrigado pelo contato! " +
-                        "Caso precise de mais ajuda, estamos à disposição."
+                val farewell =
+                    "✅ Atendimento encerrado. Obrigado pelo contato! " + "Caso precise de mais ajuda, estamos à disposição."
                 repository.sendMessage(receiverId = clientEmail, content = farewell)
 
-                val updated = safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
+                val updated =
+                    safeApiCall { repository.getConversation(conversationId) } ?: emptyList()
                 _uiState.update { it.copy(messages = updated, attendanceClosed = true) }
 
                 Log.d("ClientDetailVM", "Atendimento encerrado: $conversationId")
@@ -301,13 +323,13 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    fun clearAttendanceClosed() { _uiState.update { it.copy(attendanceClosed = false) } }
+    fun clearAttendanceClosed() {
+        _uiState.update { it.copy(attendanceClosed = false) }
+    }
 
-    fun getSenderName(senderId: String): String =
-        _uiState.value.senderNames[senderId] ?: senderId
+    fun getSenderName(senderId: String): String = _uiState.value.senderNames[senderId] ?: senderId
 
-    fun isFromOperator(senderId: String): Boolean =
-        senderId == getOperatorEmail()
+    fun isFromOperator(senderId: String): Boolean = senderId == getOperatorEmail()
 
     fun getCommandSuggestions(query: String): List<String> {
         if (!query.startsWith("/")) return emptyList()
@@ -329,10 +351,14 @@ class ClientDetailViewModel(private val repository: AuthRepository = AuthReposit
         }
     }
 
-    fun clearError() { _uiState.update { it.copy(error = null) } }
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
 
     private suspend fun <T> safeApiCall(apiCall: suspend () -> T): T? {
-        return try { apiCall() } catch (e: Exception) {
+        return try {
+            apiCall()
+        } catch (e: Exception) {
             Log.e("ClientDetailVM", "safeApiCall erro: ${e.message}")
             null
         }
