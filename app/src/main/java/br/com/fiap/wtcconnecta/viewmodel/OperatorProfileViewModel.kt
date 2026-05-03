@@ -42,7 +42,7 @@ class OperatorProfileViewModel(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val email = getEmailFromToken() ?: return@launch
-                val user  = repository.getUserByEmail(email)
+                val user = repository.getUserByEmail(email)
                 _uiState.update { it.copy(operator = user, isLoading = false) }
                 // Carrega avatar após perfil
                 loadAvatar()
@@ -62,7 +62,8 @@ class OperatorProfileViewModel(
                         _uiState.update { it.copy(avatarUrl = url) }
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -78,10 +79,10 @@ class OperatorProfileViewModel(
                 inputStream.close()
 
                 val extension = when (mimeType) {
-                    "image/png"  -> "png"
-                    "image/gif"  -> "gif"
+                    "image/png" -> "png"
+                    "image/gif" -> "gif"
                     "image/webp" -> "webp"
-                    else         -> "jpg"
+                    else -> "jpg"
                 }
 
                 val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
@@ -97,7 +98,7 @@ class OperatorProfileViewModel(
                     }
                 } else {
                     val msg = when (response.code()) {
-                        400  -> "Tipo ou tamanho inválido (máx 5MB, JPEG/PNG/GIF/WEBP)."
+                        400 -> "Tipo ou tamanho inválido (máx 5MB, JPEG/PNG/GIF/WEBP)."
                         else -> "Erro ao enviar avatar (${response.code()})."
                     }
                     _uiState.update { it.copy(isUploadingAvatar = false, avatarError = msg) }
@@ -113,8 +114,7 @@ class OperatorProfileViewModel(
     fun updateName(name: String) {
         _uiState.update { state ->
             state.copy(
-                operator = state.operator?.copy(name = name),
-                success  = true
+                operator = state.operator?.copy(name = name), success = true
             )
         }
     }
@@ -126,16 +126,28 @@ class OperatorProfileViewModel(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, passwordError = null, passwordSuccess = false) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true, passwordError = null, passwordSuccess = false
+                )
+            }
             try {
                 val success = repository.changePassword(email, currentPassword, newPassword)
                 if (success) {
                     _uiState.update { it.copy(isLoading = false, passwordSuccess = true) }
                 } else {
-                    _uiState.update { it.copy(isLoading = false, passwordError = "Senha atual incorreta.") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, passwordError = "Senha atual incorreta."
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, passwordError = "Erro ao alterar senha.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, passwordError = "Erro ao alterar senha."
+                    )
+                }
             }
         }
     }
@@ -144,16 +156,22 @@ class OperatorProfileViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, emailError = null, emailSuccess = false) }
             try {
-                repository.changeEmail(newEmail, password)
-                    .onSuccess {
-                        repository.logout()
-                        _uiState.update { it.copy(isLoading = false, emailSuccess = true) }
+                repository.changeEmail(newEmail, password).onSuccess {
+                    repository.logout()
+                    _uiState.update { it.copy(isLoading = false, emailSuccess = true) }
+                }.onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false, emailError = e.message ?: "Erro ao alterar e-mail."
+                        )
                     }
-                    .onFailure { e ->
-                        _uiState.update { it.copy(isLoading = false, emailError = e.message ?: "Erro ao alterar e-mail.") }
-                    }
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, emailError = "Erro ao alterar e-mail.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false, emailError = "Erro ao alterar e-mail."
+                    )
+                }
             }
         }
     }
@@ -163,14 +181,15 @@ class OperatorProfileViewModel(
         return try {
             val payload = token.split(".")[1]
             val decoded = android.util.Base64.decode(
-                payload.padEnd((payload.length + 3) / 4 * 4, '='),
-                android.util.Base64.URL_SAFE
+                payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
             )
-            val json  = String(decoded)
+            val json = String(decoded)
             val start = json.indexOf("\"sub\"") + 7
-            val end   = json.indexOf("\"", start)
+            val end = json.indexOf("\"", start)
             if (start > 6 && end > start) json.substring(start, end) else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun deleteAvatar() {
@@ -181,19 +200,39 @@ class OperatorProfileViewModel(
                 if (response.isSuccessful) {
                     _uiState.update { it.copy(isUploadingAvatar = false, avatarUrl = null) }
                 } else {
-                    _uiState.update { it.copy(isUploadingAvatar = false,
-                        avatarError = "Erro ao excluir foto.") }
+                    _uiState.update {
+                        it.copy(
+                            isUploadingAvatar = false, avatarError = "Erro ao excluir foto."
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isUploadingAvatar = false,
-                    avatarError = "Erro ao excluir foto.") }
+                _uiState.update {
+                    it.copy(
+                        isUploadingAvatar = false, avatarError = "Erro ao excluir foto."
+                    )
+                }
             }
         }
     }
 
-    fun clearAvatarError()   { _uiState.update { it.copy(avatarError = null) } }
-    fun clearSuccess()       { _uiState.update { it.copy(success = false) } }
-    fun clearError()         { _uiState.update { it.copy(error = null) } }
-    fun clearPasswordState() { _uiState.update { it.copy(passwordSuccess = false, passwordError = null) } }
-    fun clearEmailState()    { _uiState.update { it.copy(emailSuccess = false, emailError = null) } }
+    fun clearAvatarError() {
+        _uiState.update { it.copy(avatarError = null) }
+    }
+
+    fun clearSuccess() {
+        _uiState.update { it.copy(success = false) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
+    fun clearPasswordState() {
+        _uiState.update { it.copy(passwordSuccess = false, passwordError = null) }
+    }
+
+    fun clearEmailState() {
+        _uiState.update { it.copy(emailSuccess = false, emailError = null) }
+    }
 }
