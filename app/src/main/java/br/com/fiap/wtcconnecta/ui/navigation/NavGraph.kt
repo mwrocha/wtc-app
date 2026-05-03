@@ -57,22 +57,28 @@ sealed class Routes(val route: String) {
             return "group_chat/$groupId/$safeName"
         }
     }
+
     object OperatorProfile : Routes("operator_profile/{operatorId}") {
         fun createRoute(operatorId: String) = "operator_profile/$operatorId"
     }
+
     object HomeClient : Routes("home_client/{clientId}") {
         fun createRoute(clientId: String) = "home_client/$clientId"
     }
+
     object ConversationList : Routes("conversation_list/{clientId}") {
         fun createRoute(clientId: String) = "conversation_list/$clientId"
     }
+
     object Profile : Routes("profile/{clientId}") {
         fun createRoute(clientId: String) = "profile/$clientId"
     }
+
     object Settings : Routes("settings")
     object ClientDetail : Routes("client_detail/{clientId}") {
         fun createRoute(clientId: String) = "client_detail/$clientId"
     }
+
     object Chat : Routes("chat/{chatId}/{chatName}/{chatType}")
     object AttendanceHistory : Routes("attendance_history")
     object MediaGallery : Routes("media_gallery/{clientId}") {
@@ -101,52 +107,55 @@ fun NavGraph(
     NavHost(navController = navController, startDestination = Routes.Login.route) {
 
         composable(Routes.Login.route) {
-            LoginScreen(
-                onLoginSuccess = { result: LoginResult ->
-                    mainViewModel.onLoginSuccess(result)
-                    val navOptions = navOptions {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                    if (result.role == "operador") {
-                        navController.navigate(Routes.OperatorDashboard.route, navOptions)
-                    } else {
-                        navController.navigate(Routes.HomeClient.createRoute(result.userId), navOptions)
-                    }
-                },
-                onNavigateToRegister = { navController.navigate(Routes.Register.route) }
-            )
+            LoginScreen(onLoginSuccess = { result: LoginResult ->
+                mainViewModel.onLoginSuccess(result)
+                val navOptions = navOptions {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+                if (result.role == "operador") {
+                    navController.navigate(Routes.OperatorDashboard.route, navOptions)
+                } else {
+                    navController.navigate(
+                        Routes.HomeClient.createRoute(result.userId), navOptions
+                    )
+                }
+            }, onNavigateToRegister = { navController.navigate(Routes.Register.route) })
         }
 
         composable(Routes.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = { navController.popBackStack() },
-                onBackToLogin = { navController.popBackStack() }
-            )
+                onBackToLogin = { navController.popBackStack() })
         }
 
         composable(Routes.OperatorDashboard.route) {
             val session = userSession
             if (session != null && session.role == "operador") {
                 OperatorDashboardScreen(
-                    operatorName              = session.name,
-                    onViewClients             = { navController.navigate(Routes.OperatorClients.route) },
-                    onNavigateToProfile       = { navController.navigate(Routes.OperatorProfile.createRoute(session.id)) },
-                    onNavigateToSettings      = { navController.navigate(Routes.Settings.route) },
-                    onNavigateToCampaigns     = { navController.navigate(Routes.Campaigns.route) },
-                    onNavigateToKanban        = { navController.navigate(Routes.Kanban.route) },
+                    operatorName = session.name,
+                    onViewClients = { navController.navigate(Routes.OperatorClients.route) },
+                    onNavigateToProfile = {
+                        navController.navigate(
+                            Routes.OperatorProfile.createRoute(
+                                session.id
+                            )
+                        )
+                    },
+                    onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
+                    onNavigateToCampaigns = { navController.navigate(Routes.Campaigns.route) },
+                    onNavigateToKanban = { navController.navigate(Routes.Kanban.route) },
                     onNavigateToGroupManagement = { navController.navigate(Routes.GroupManagement.route) },
-                    onNavigateToAudit         = { navController.navigate(Routes.Audit.route) },
+                    onNavigateToAudit = { navController.navigate(Routes.Audit.route) },
                     onNavigateToGroupRequests = { navController.navigate(Routes.GroupRequests.route) },
                     onNavigateToAttendanceQueue = { navController.navigate(Routes.AttendanceQueue.route) },
-                    onNavigateToGroupChat       = { navController.navigate(Routes.GroupList.route) },
+                    onNavigateToGroupChat = { navController.navigate(Routes.GroupList.route) },
                     onLogout = {
                         mainViewModel.logout()
                         AuthRepository().logout()
                         navController.navigate(Routes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
-                )
+                    })
             }
         }
 
@@ -154,11 +163,22 @@ fun NavGraph(
             val session = userSession
             if (session != null && session.role == "operador") {
                 HomeOperatorScreen(
-                    currentOperatorId   = session.id,
-                    onNavigateToProfile = { navController.navigate(Routes.OperatorProfile.createRoute(session.id)) },
+                    currentOperatorId = session.id,
+                    onNavigateToProfile = {
+                        navController.navigate(
+                            Routes.OperatorProfile.createRoute(
+                                session.id
+                            )
+                        )
+                    },
                     onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
-                    onClientClick       = { clientId -> navController.navigate(Routes.ClientDetail.createRoute(clientId)) }
-                )
+                    onClientClick = { clientId ->
+                        navController.navigate(
+                            Routes.ClientDetail.createRoute(
+                                clientId
+                            )
+                        )
+                    })
             }
         }
 
@@ -168,39 +188,50 @@ fun NavGraph(
 
         composable(Routes.ClientDetail.route) { backStackEntry ->
             val clientId = backStackEntry.arguments?.getString("clientId")
-            val session  = userSession
+            val session = userSession
             if (clientId != null && session != null && session.role == "operador") {
                 ClientDetailScreen(
-                    clientId          = clientId,
-                    onBack            = { navController.popBackStack() },
+                    clientId = clientId,
+                    onBack = { navController.popBackStack() },
                     currentOperatorId = session.id,
-                    navController     = navController
+                    navController = navController
                 )
             }
         }
 
         composable(Routes.HomeClient.route) { backStackEntry ->
             val clientId = backStackEntry.arguments?.getString("clientId")
-            val session  = userSession
+            val session = userSession
             if (clientId != null) {
                 HomeClientScreen(
-                    clientId     = clientId,
-                    clientName   = session?.name ?: "",
+                    clientId = clientId,
+                    clientName = session?.name ?: "",
                     onNavigateToConversationList = {
                         navController.navigate(Routes.ConversationList.createRoute(clientId))
                     },
-                    onNavigateToProfile   = { navController.navigate(Routes.Profile.createRoute(clientId)) },
+                    onNavigateToProfile = {
+                        navController.navigate(
+                            Routes.Profile.createRoute(
+                                clientId
+                            )
+                        )
+                    },
                     onNavigateToCampaigns = { navController.navigate(Routes.CampaignExpress.route) },
-                    onNavigateToHistory   = { navController.navigate(Routes.AttendanceHistory.route) },
-                    onNavigateToGallery   = { navController.navigate(Routes.MediaGallery.createRoute(clientId)) },
+                    onNavigateToHistory = { navController.navigate(Routes.AttendanceHistory.route) },
+                    onNavigateToGallery = {
+                        navController.navigate(
+                            Routes.MediaGallery.createRoute(
+                                clientId
+                            )
+                        )
+                    },
                     onLogout = {
                         mainViewModel.logout()
                         AuthRepository().logout()
                         navController.navigate(Routes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
-                )
+                    })
             }
         }
 
@@ -208,24 +239,21 @@ fun NavGraph(
             val clientId = backStackEntry.arguments?.getString("clientId")
             if (clientId != null) {
                 ConversationListScreen(
-                    clientId = clientId,
-                    onNavigateToChat = { chatId, chatName, chatType ->
+                    clientId = clientId, onNavigateToChat = { chatId, chatName, chatType ->
                         navController.navigate("chat/$chatId/$chatName/$chatType")
-                    }
-                )
+                    })
             }
         }
 
         composable(
-            route = Routes.Chat.route,
-            deepLinks = listOf(
-                navDeepLink { uriPattern = "wtcconnecta://chat/{chatId}/{chatName}/{chatType}" }
-            )
-        ) { backStackEntry ->
-            val chatId   = backStackEntry.arguments?.getString("chatId")
+            route = Routes.Chat.route, deepLinks = listOf(
+            navDeepLink {
+                uriPattern = "wtcconnecta://chat/{chatId}/{chatName}/{chatType}"
+            })) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId")
             val chatName = backStackEntry.arguments?.getString("chatName")
             val chatType = backStackEntry.arguments?.getString("chatType")
-            val session  = userSession
+            val session = userSession
             if (chatId != null && chatName != null && chatType != null && session != null) {
                 val chatViewModel: ChatViewModel = viewModel()
                 val loggedInUserId = session.email
@@ -233,12 +261,12 @@ fun NavGraph(
                     chatViewModel.loadMessages(chatId, chatType, loggedInUserId)
                 }
                 ChatScreen(
-                    chatId         = chatId,
-                    chatName       = chatName,
-                    chatType       = chatType,
-                    onBack         = { navController.popBackStack() },
+                    chatId = chatId,
+                    chatName = chatName,
+                    chatType = chatType,
+                    onBack = { navController.popBackStack() },
                     loggedInUserId = loggedInUserId,
-                    viewModel      = chatViewModel
+                    viewModel = chatViewModel
                 )
             }
         }
@@ -246,8 +274,8 @@ fun NavGraph(
         composable(Routes.CampaignExpress.route) {
             val session = userSession
             CampaignExpressScreen(
-                onBack        = { navController.popBackStack() },
-                clientId      = session?.id ?: "",
+                onBack = { navController.popBackStack() },
+                clientId = session?.id ?: "",
                 navController = navController
             )
         }
@@ -267,40 +295,33 @@ fun NavGraph(
         composable(Routes.Audit.route) {
             val session = userSession
             AuditScreen(
-                onBack           = { navController.popBackStack() },
-                currentUserEmail = session?.email ?: ""
+                onBack = { navController.popBackStack() }, currentUserEmail = session?.email ?: ""
             )
         }
 
         composable(Routes.OperatorProfile.route) { backStackEntry ->
             val operatorId = backStackEntry.arguments?.getString("operatorId") ?: ""
             OperatorProfileScreen(
-                operatorId     = operatorId,
-                onNavigateBack = { navController.popBackStack() }
-            )
+                operatorId = operatorId, onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Routes.Profile.route) { backStackEntry ->
             val clientId = backStackEntry.arguments?.getString("clientId") ?: ""
             ProfileScreen(
-                clientId         = clientId,
+                clientId = clientId,
                 onProfileUpdated = { navController.popBackStack() },
-                onNavigateBack   = { navController.popBackStack() }
-            )
+                onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Routes.AttendanceHistory.route) {
             ClientAttendanceHistoryScreen(
-                onBack = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
 
         composable(Routes.MediaGallery.route) { backStackEntry ->
             val clientId = backStackEntry.arguments?.getString("clientId") ?: ""
             ClientMediaGalleryScreen(
-                clientId = clientId,
-                onBack   = { navController.popBackStack() }
-            )
+                clientId = clientId, onBack = { navController.popBackStack() })
         }
 
         composable(Routes.AttendanceQueue.route) {
@@ -316,31 +337,28 @@ fun NavGraph(
                 },
                 onNavigateToClosed = { clientId ->
                     navController.navigate(Routes.ClientDetail.createRoute(clientId))
-                }
-            )
+                })
         }
 
         // ── Lista de grupos para chat ─────────────────────────────────────────
         composable(Routes.GroupList.route) {
             GroupListScreen(
-                onBack       = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
                 onGroupClick = { groupId, groupName ->
                     navController.navigate(Routes.GroupChat.createRoute(groupId, groupName))
-                }
-            )
+                })
         }
 
         // ── Chat de um grupo específico ───────────────────────────────────────
         composable(Routes.GroupChat.route) { backStackEntry ->
-            val groupId   = backStackEntry.arguments?.getString("groupId") ?: ""
+            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
             val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
-            val session   = userSession
+            val session = userSession
             GroupChatScreen(
-                groupId    = groupId,
-                groupName  = groupName,
+                groupId = groupId,
+                groupName = groupName,
                 operatorId = session?.email ?: "",
-                onBack     = { navController.popBackStack() }
-            )
+                onBack = { navController.popBackStack() })
         }
     }
 }
