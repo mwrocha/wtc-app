@@ -26,9 +26,9 @@ class TaskViewModel(
     val uiState = _uiState.asStateFlow()
 
     // Tarefas agrupadas por status para o Kanban
-    val pendingTasks   get() = _uiState.value.tasks.filter { it.status == "PENDING" }
+    val pendingTasks get() = _uiState.value.tasks.filter { it.status == "PENDING" }
     val inProgressTasks get() = _uiState.value.tasks.filter { it.status == "IN_PROGRESS" }
-    val doneTasks      get() = _uiState.value.tasks.filter { it.status == "DONE" }
+    val doneTasks get() = _uiState.value.tasks.filter { it.status == "DONE" }
 
     fun loadTasks() {
         viewModelScope.launch {
@@ -66,8 +66,7 @@ class TaskViewModel(
                     state.copy(
                         tasks = state.tasks.map { task ->
                             if (task.id == taskId) task.copy(status = newStatus) else task
-                        }
-                    )
+                        })
                 }
             } catch (e: Exception) {
                 Log.e("TaskViewModel", "Erro ao atualizar status: ${e.message}")
