@@ -17,19 +17,18 @@ import kotlinx.coroutines.launch
 class WTCFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        const val CHANNEL_ID   = "wtc_messages"
+        const val CHANNEL_ID = "wtc_messages"
         const val CHANNEL_NAME = "Mensagens WTC"
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        val title = remoteMessage.notification?.title
-            ?: remoteMessage.data["title"] ?: "WTC Connecta"
-        val body = remoteMessage.notification?.body
-            ?: remoteMessage.data["body"] ?: ""
-        val type           = remoteMessage.data["type"]           ?: "DIRECT"
+        val title =
+            remoteMessage.notification?.title ?: remoteMessage.data["title"] ?: "WTC Connecta"
+        val body = remoteMessage.notification?.body ?: remoteMessage.data["body"] ?: ""
+        val type = remoteMessage.data["type"] ?: "DIRECT"
         val conversationId = remoteMessage.data["conversationId"] ?: ""
-        val groupId        = remoteMessage.data["groupId"]        ?: ""
-        val senderId       = remoteMessage.data["senderId"]       ?: ""
+        val groupId = remoteMessage.data["groupId"] ?: ""
+        val senderId = remoteMessage.data["senderId"] ?: ""
 
         val loggedUserEmail = getEmailFromToken(RetrofitClient.authToken)
 
@@ -44,10 +43,10 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
             Log.d("FCM", "Push de solicitação de grupo recebido")
             InAppNotificationState.show(
                 InAppNotification(
-                    title    = title,
-                    body     = body,
-                    type     = "GROUP_REQUEST",
-                    chatId   = "group_requests",
+                    title = title,
+                    body = body,
+                    type = "GROUP_REQUEST",
+                    chatId = "group_requests",
                     chatName = "Solicitações de Grupo",
                     chatType = "group_request"
                 )
@@ -56,7 +55,7 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        val chatId   = if (type == "GROUP") groupId else conversationId
+        val chatId = if (type == "GROUP") groupId else conversationId
         val chatName = if (type == "GROUP") "Grupo" else "Atendimento WTC"
         val chatType = if (type == "GROUP") "group" else "1on1"
 
@@ -65,10 +64,12 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
         // Evita que um push com chatId de outra conversa abra o chat errado.
         if (type == "DIRECT" && loggedUserEmail != null && senderId.isNotBlank()) {
             val chatIdContainsSender = chatId.contains(senderId)
-            val chatIdContainsMe     = chatId.contains(loggedUserEmail)
+            val chatIdContainsMe = chatId.contains(loggedUserEmail)
             if (!chatIdContainsSender && !chatIdContainsMe) {
-                Log.w("FCM", "Push descartado por segurança — " +
-                        "chatId=$chatId não contém sender=$senderId nem loggedUser=$loggedUserEmail")
+                Log.w(
+                    "FCM",
+                    "Push descartado por segurança — " + "chatId=$chatId não contém sender=$senderId nem loggedUser=$loggedUserEmail"
+                )
                 return
             }
         }
@@ -77,10 +78,10 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
 
         InAppNotificationState.show(
             InAppNotification(
-                title    = title,
-                body     = body,
-                type     = type,
-                chatId   = chatId,
+                title = title,
+                body = body,
+                type = type,
+                chatId = chatId,
                 chatName = chatName,
                 chatType = chatType
             )
@@ -91,14 +92,11 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun showSystemNotification(title: String, body: String) {
         createNotificationChannel()
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.logo_login)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
+        val notification =
+            NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.logo_login)
+                .setContentTitle(title).setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body)).setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH).build()
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(System.currentTimeMillis().toInt(), notification)
     }
@@ -118,14 +116,15 @@ class WTCFirebaseMessagingService : FirebaseMessagingService() {
         return try {
             val payload = token.split(".")[1]
             val decoded = android.util.Base64.decode(
-                payload.padEnd((payload.length + 3) / 4 * 4, '='),
-                android.util.Base64.URL_SAFE
+                payload.padEnd((payload.length + 3) / 4 * 4, '='), android.util.Base64.URL_SAFE
             )
             val json = String(decoded)
             val start = json.indexOf("\"sub\"") + 7
             val end = json.indexOf("\"", start)
             if (start > 6 && end > start) json.substring(start, end) else null
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override fun onNewToken(token: String) {
