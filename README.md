@@ -4,8 +4,6 @@ Aplicativo Android nativo do projeto WTC Connecta, desenvolvido em Kotlin com Je
 Conecta clientes corporativos ao World Trade Center São Paulo, permitindo comunicação em tempo real,
 gestão de atendimentos, campanhas e grupos.
 
-**Responsável:** Mayke Rocha · RM560523  
-**Instituição:** FIAP · 2026
 
 ---
 
